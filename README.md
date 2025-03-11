@@ -11,3 +11,5 @@ In our SNO, we will run an application responsible for monitoring the health of 
 
 ### Charging Optimization
 On an RHEL machine running MicroShift, we will deploy an application that interacts with the battery monitoring system to optimize charging patterns at an EV charging station. This application will use another AI model to enhance charging efficiency and extend battery lifespan.
+
+You can find the lab instructions in the following repository: https://github.com/dialvare/showroom-ai-lifecycle-edge 
