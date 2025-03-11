@@ -14,4 +14,8 @@ On an RHEL machine running MicroShift, we will deploy an application that intera
 
 ## Lab instructions
 
-You can find the lab instructions in the following repository: https://github.com/dialvare/showroom-ai-lifecycle-edge 
+You can find the lab instructions in the following repository:
+
+```
+https://github.com/dialvare/showroom-ai-lifecycle-edge 
+```
