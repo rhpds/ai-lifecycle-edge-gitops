@@ -30,9 +30,11 @@ spec:
             secretKeyRef:
               name: minio-secret
               key: minio_root_password
+        - name: MC_CONFIG_DIR
+          value: "/tmp/.mc"
         volumeMounts:
         - name: mc-config
-          mountPath: /root/.mc
+          mountPath: /tmp/.mc
       restartPolicy: OnFailure
       volumes:
       - name: mc-config
