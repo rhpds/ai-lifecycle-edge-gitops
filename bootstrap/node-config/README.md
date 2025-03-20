@@ -2,7 +2,10 @@
 
 ## Components
 
-- MinIO
+* MinIO: s3 storage used to accommodate data and models. Also to store artifacts generated when using pipelines. Therefore, two buckets are created:
+  
+  * `s3-storage`: used to store data and the new trained AI models.
+  * `pipelines`: used to store pipelines artifacts.
 
 ## Installation
 
