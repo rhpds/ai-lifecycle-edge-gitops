@@ -1,7 +1,7 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: battery-simulation
+  name: node-config
   namespace: openshift-gitops
 spec:
   destination:
@@ -9,7 +9,7 @@ spec:
     namespace: ''
     server: https://kubernetes.default.svc
   source:
-    path: bootstrap/battery-simulation/groups/dev
+    path: bootstrap/node-config/groups/dev
     repoURL: https://github.com/dialvare/ai-lifecycle-edge.git
     targetRevision: HEAD
   sources: []
