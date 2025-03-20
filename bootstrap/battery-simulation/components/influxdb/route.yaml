@@ -1,0 +1,16 @@
+kind: Route
+apiVersion: route.openshift.io/v1
+metadata:
+  name: influxdb
+spec:
+  path: /
+  to:
+    kind: Service
+    name: influxdb
+    weight: 100
+  port:
+    targetPort: influxdb
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Allow
+  wildcardPolicy: None

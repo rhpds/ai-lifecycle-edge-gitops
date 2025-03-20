@@ -1,0 +1,25 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: battery-simulation
+  labels:
+    app: battery-simulation
+    app.kubernetes.io/component: battery-simulation
+    app.kubernetes.io/instance: battery-simulation
+    app.kubernetes.io/name: battery-simulation
+    app.kubernetes.io/part-of: battery-simulation
+spec:
+  ports:
+    - name: 8080-tcp
+      protocol: TCP
+      port: 8080
+      targetPort: 8080
+    - name: 8443-tcp
+      protocol: TCP
+      port: 8443
+      targetPort: 8443
+  internalTrafficPolicy: Cluster
+  type: ClusterIP
+  selector:
+    app: battery-simulation
+    deployment: battery-simulation

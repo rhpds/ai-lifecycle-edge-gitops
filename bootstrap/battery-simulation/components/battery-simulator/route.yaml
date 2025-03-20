@@ -1,0 +1,21 @@
+kind: Route
+apiVersion: route.openshift.io/v1
+metadata:
+  name: battery-simulation
+  labels:
+    app: battery-simulation
+    app.kubernetes.io/component: battery-simulation
+    app.kubernetes.io/instance: battery-simulation
+    app.kubernetes.io/name: battery-simulation
+    app.kubernetes.io/part-of: battery-simulation
+spec:
+  to:
+    kind: Service
+    name: battery-simulation
+    weight: 100
+  port:
+    targetPort: 8080-tcp
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+  wildcardPolicy: None
