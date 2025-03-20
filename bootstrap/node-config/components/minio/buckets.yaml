@@ -12,8 +12,12 @@ spec:
         command: ["/bin/sh", "-c"]
         args:
           - |
-            mc alias set myminio http://minio.minio.svc.cluster.local:9000 $MINIO_ROOT_USER $MINIO_ROOT_PASSWORD
-            mc mb myminio/s3-stroage
+            echo "Waiting for MinIO to become available..."
+            until mc alias set myminio http://minio.minio.svc.cluster.local:9000 $MINIO_ROOT_USER $MINIO_ROOT_PASSWORD; do
+              echo "Retrying in 5s..."
+              sleep 5
+            done
+            mc mb myminio/s3-storage
             mc mb myminio/pipelines
         env:
         - name: MINIO_ROOT_USER
@@ -26,4 +30,10 @@ spec:
             secretKeyRef:
               name: minio-secret
               key: minio_root_password
+        volumeMounts:
+        - name: mc-config
+          mountPath: /root/.mc
       restartPolicy: OnFailure
+      volumes:
+      - name: mc-config
+        emptyDir: {}
