@@ -1,4 +1,4 @@
-# GitOps repo for battery-simulation demo
+# GitOps repo for node configuration
 
 ## Components
 
