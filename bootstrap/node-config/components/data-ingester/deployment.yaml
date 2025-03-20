@@ -1,0 +1,56 @@
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: data-ingester-jvm
+  annotations:
+    app.openshift.io/connects-to: '[{"apiVersion":"apps/v1","kind":"StatefulSet","name":"mqtt-broker-ss"},{"apiVersion":"apps/v1","kind":"StatefulSet","name":"influxdb"}]'
+  labels:
+    app: data-ingester-jvm
+    app.kubernetes.io/component: data-ingester-jvm
+    app.kubernetes.io/instance: data-ingester-jvm
+    app.kubernetes.io/name: data-ingester-jvm
+    app.kubernetes.io/part-of: metrics-processors
+    app.openshift.io/runtime: quarkus
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: data-ingester-jvm
+  template:
+    metadata:
+      labels:
+        app: data-ingester-jvm
+        deployment: data-ingester-jvm
+    spec:
+      containers:
+        - name: data-ingester-jvm
+          image: 'quay.io/oschneid/data-ingester-jvm:1.0'
+          ports:
+            - containerPort: 8080
+              protocol: TCP
+            - containerPort: 8443
+              protocol: TCP
+          env:
+            - name: influxdb.url
+              value: 'http://influxdb.namespace.svc.cluster.local:8086'
+            - name: influxdb.token
+              value: admin_token
+            - name: mp.messaging.incoming.metrics.host
+              value: mqtt-broker-all-0-svc.namespace.svc.cluster.local
+            - name: mp.messaging.incoming.metrics.port
+              value: '61616'
+            - name: mp.messaging.incoming.metrics.topic
+              value: /ev/bms/#
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          imagePullPolicy: Always
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 25%
+      maxSurge: 25%
+  revisionHistoryLimit: 10
+  progressDeadlineSeconds: 600
