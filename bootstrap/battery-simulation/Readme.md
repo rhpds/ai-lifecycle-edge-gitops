@@ -12,13 +12,15 @@
 
 ## Installation
 
-Create a new Argo application that points to `groups/dev`. It will install all the components in the `battery-demo` namespace
+First, modify the `groups/dev/files/config.json` file and replace `cluster-wwfmx.dynamic.redhatworkshops.io`, in the `BATTERY_METRICS_WS_ENDPOINT` variable with your cluster domain. 
+
+Then, create a new Argo application that points to `bootstrap/battery-simulation/groups/dev`. It will install all the components in the `battery-demo` namespace
 
 ````yaml
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: battery-demo
+  name: battery-simulation
   namespace: openshift-gitops
 spec:
   destination:
@@ -26,8 +28,8 @@ spec:
     namespace: ''
     server: https://kubernetes.default.svc
   source:
-    path: groups/dev
-    repoURL: https://github.com/dialvare/battery-simulation-gitops
+    path: bootstrap/battery-simulation/groups/dev
+    repoURL: https://github.com/dialvare/ai-lifecycle-edge.git
     targetRevision: HEAD
   sources: []
   project: default
@@ -40,7 +42,7 @@ spec:
 Install the argo app:
 
 ````shellscript
-oc apply -f argo-app.yaml -n openshift-gitops
+oc apply -f battery-simulation.yaml -n openshift-gitops
 ````
 
 ## Exploring the data in InfluxDB
