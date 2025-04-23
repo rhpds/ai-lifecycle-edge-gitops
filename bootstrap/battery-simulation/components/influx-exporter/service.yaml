@@ -1,0 +1,23 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: influx-exporter
+  labels:
+    app: influx-exporter
+    app.kubernetes.io/component: influx-exporter
+    app.kubernetes.io/instance: influx-exporter
+    app.kubernetes.io/name: influx-exporter
+spec:
+  ports:
+    - name: 8443-tcp
+      protocol: TCP
+      port: 8443
+      targetPort: 8443
+    - name: 8080-tcp
+      protocol: TCP
+      port: 8080
+      targetPort: 8080
+  type: ClusterIP
+  selector:
+    app: influx-exporter
+    deployment: influx-exporter

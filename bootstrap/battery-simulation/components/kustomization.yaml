@@ -9,3 +9,4 @@ resources:
 - data-ingester
 - dashboard
 - mqtt2ws
+- influx-exporter

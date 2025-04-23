@@ -1,0 +1,58 @@
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: influx-exporter
+  annotations:
+    app.openshift.io/connects-to: '[{"apiVersion":"apps/v1","kind":"StatefulSet","name":"influxdb"}]'
+  labels:
+    app: influx-exporter
+    app.kubernetes.io/component: influx-exporter
+    app.kubernetes.io/instance: influx-exporter
+    app.kubernetes.io/name: influx-exporter
+    app.kubernetes.io/part-of: data-store
+    app.openshift.io/runtime: quarkus
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: influx-exporter
+  template:
+    metadata:
+      labels:
+        app: influx-exporter
+        deployment: influx-exporter
+    spec:
+      containers:
+        - name: influx-exporter
+          image: 'quay.io/oschneid/influx-exporter-jvm:1.0'
+          ports:
+            - containerPort: 8080
+              protocol: TCP
+            - containerPort: 8443
+              protocol: TCP
+          env:
+            - name: influxdb.url
+              value: 'http://influxdb.namespace.svc.cluster.local:8086'
+            - name: influxdb.token
+              value: admin_token
+            - name: minio.endpoint
+              value: http://minio.namespace.svc.cluster.local:9000
+            - name: minio.access-key-id
+              value: minio
+            - name: minio.secret-access-key
+              value: minio123
+            - name: minio.bucket
+              value: s3-storage
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          imagePullPolicy: Always
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 25%
+      maxSurge: 25%
+  revisionHistoryLimit: 10
+  progressDeadlineSeconds: 600
