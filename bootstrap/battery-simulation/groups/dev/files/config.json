@@ -1,4 +1,4 @@
 {
-    "BATTERY_METRICS_WS_ENDPOINT": "wss://mqtt2ws-battery-demo.apps.cluster-ltj4l.dynamic.redhatworkshops.io/battery/metrics/",
+    "BATTERY_METRICS_WS_ENDPOINT": "wss://mqtt2ws-battery-demo.apps.cluster-8hf57.dynamic.redhatworkshops.io/battery/metrics/",
     "OPEN_AI_API_KEY": "my-key"
 }
