@@ -22,7 +22,7 @@ patches:
    patch: |-
     - op: replace
       path: /spec/template/spec/containers/0/env/0/value
-      value: 'tcp://mqtt-broker-all-0-svc.battery-demo.svc.cluster.local:61616'
+      value: 'tcp://mosquitto:1883'
  - target:
     group: apps
     version: v1
@@ -31,7 +31,7 @@ patches:
    patch: |-
     - op: replace
       path: /spec/template/spec/containers/0/env/0/value
-      value: 'tcp://mqtt-broker-all-0-svc.battery-demo.svc.cluster.local:61616'     
+      value: 'tcp://mosquitto:1883'     
  - target:
     group: rbac.authorization.k8s.io
     version: v1
@@ -52,7 +52,7 @@ patches:
       value: 'http://influxdb.battery-demo.svc.cluster.local:8086'
     - op: replace
       path: /spec/template/spec/containers/0/env/2/value
-      value: 'mqtt-broker-all-0-svc.battery-demo.svc.cluster.local'
+      value: 'mosquitto'
  - target:
     group: apps
     version: v1
