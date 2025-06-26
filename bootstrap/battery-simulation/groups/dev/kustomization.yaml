@@ -15,12 +15,6 @@ configMapGenerator:
 
 patches:
  - target:
-      group: operators.coreos.com
-      version: v1
-      kind: OperatorGroup
-      name: og-battery-simulation
-   path: og-patch.yaml
- - target:
     group: apps
     version: v1
     kind: Deployment
