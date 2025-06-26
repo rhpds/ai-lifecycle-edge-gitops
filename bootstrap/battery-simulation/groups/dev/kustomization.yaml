@@ -22,7 +22,7 @@ patches:
    patch: |-
     - op: replace
       path: /spec/template/spec/containers/0/env/0/value
-      value: 'tcp://mosquitto.battery-demo.svc.cluster.local:1883'
+      value: 'tcp://mqtt-broker-all-0-svc.battery-demo.svc.cluster.local:61616'
  - target:
     group: apps
     version: v1
@@ -31,7 +31,7 @@ patches:
    patch: |-
     - op: replace
       path: /spec/template/spec/containers/0/env/0/value
-      value: 'tcp://mosquitto.battery-demo.svc.cluster.local:1883'     
+      value: 'tcp://mqtt-broker-all-0-svc.battery-demo.svc.cluster.local:61616'     
  - target:
     group: rbac.authorization.k8s.io
     version: v1
