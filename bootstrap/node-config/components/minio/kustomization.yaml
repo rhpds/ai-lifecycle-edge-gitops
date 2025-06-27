@@ -14,3 +14,4 @@ resources:
 - service.yaml
 - route.yaml
 - buckets.yaml
+- upload.yaml
