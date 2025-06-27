@@ -1,0 +1,15 @@
+apiVersion: serving.kserve.io/v1beta1
+kind: InferenceService
+metadata:
+  name: stress-detection
+spec:
+  predictor:
+    serviceAccountName: sa-s3-minio
+    model:
+      protocolVersion: v2
+      modelFormat:
+        name: openvino_ir
+      storageUri: "s3://s3-storage/models/stress-detection/"
+      args:
+        - --layout=NHWC:NCHW
+

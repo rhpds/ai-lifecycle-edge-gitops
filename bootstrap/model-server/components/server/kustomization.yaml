@@ -1,0 +1,15 @@
+kind: Kustomization
+apiVersion: kustomize.config.k8s.io/v1beta1
+
+namespace: inference
+
+commonLabels:
+  component: inference
+
+resources:
+- namespace.yaml
+- ovms-kserve.yaml
+- secret.yaml
+- sa.yaml
+- inferenceservice.yaml
+- route.yaml
