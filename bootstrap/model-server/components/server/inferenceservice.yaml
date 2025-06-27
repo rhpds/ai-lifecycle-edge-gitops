@@ -10,6 +10,6 @@ spec:
       modelFormat:
         name: openvino_ir
       storageUri: "s3://s3-storage/models/stress-detection/"
-      args:
-        - --layout=NHWC:NCHW
+#      args:
+#        - --layout=NHWC:NCHW
 
