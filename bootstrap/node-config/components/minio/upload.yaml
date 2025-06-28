@@ -48,7 +48,7 @@ spec:
 
       containers:
         - name: uploader
-          image: alpine:latest
+          image: curlimages/curl:latest
           securityContext:
             runAsNonRoot: true
           command: ["/bin/sh", "-c"]
