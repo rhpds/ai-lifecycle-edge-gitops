@@ -9,6 +9,8 @@ spec:
       containers:
         - name: uploader
           image: alpine:latest
+          securityContext:
+            runAsUser: 0
           command: ["/bin/sh", "-c"]
           args:
             - |
