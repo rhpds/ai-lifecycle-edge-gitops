@@ -16,19 +16,19 @@ spec:
           command: ["/bin/sh", "-c"]
           args:
             - |
-              echo "🕒 Esperando a que MinIO esté disponible..."
+              echo "Waiting for MinIO to become available..."
               until mc alias set myminio http://minio-service.minio.svc.cluster.local:9000 $MINIO_ROOT_USER $MINIO_ROOT_PASSWORD; do
-                echo "⏳ Esperando conexión a MinIO..."
+                echo "Waiting for a MinIO connection..."
                 sleep 5
               done
 
-              echo "📦 Verificando que los buckets existan..."
+              echo "Verifying existing buckets..."
               until mc ls myminio/s3-storage && mc ls myminio/pipelines; do
-                echo "⏳ Buckets aún no disponibles. Esperando..."
+                echo "Buckets not available yet. Waiting..."
                 sleep 5
               done
 
-              echo "✅ Buckets encontrados. Continuando..."
+              echo "Buckets found..."
           env:
             - name: MINIO_ROOT_USER
               valueFrom:
@@ -54,22 +54,22 @@ spec:
           command: ["/bin/sh", "-c"]
           args:
             - |
-              echo "⬇️ Descargando cliente mc..."
+              echo "Downloading mc client..."
               wget https://dl.min.io/client/mc/release/linux-amd64/mc -O /tmp/mc
               chmod +x /tmp/mc
 
-              echo "⬇️ Descargando modelos desde GitHub..."
+              echo "Downloading models from GitHub..."
               wget https://raw.githubusercontent.com/dialvare/ai-lifecycle-edge/main/models/stress-detection/stress-detection.xml -O /tmp/stress-detection.xml
               wget https://raw.githubusercontent.com/dialvare/ai-lifecycle-edge/main/models/stress-detection/stress-detection.bin -O /tmp/stress-detection.bin
 
-              echo "🔐 Configurando acceso a MinIO..."
+              echo "Configuring MinIO access..."
               /tmp/mc alias set myminio http://minio-service.minio.svc.cluster.local:9000 $MINIO_ROOT_USER $MINIO_ROOT_PASSWORD
 
-              echo "⬆️ Subiendo archivos a MinIO..."
+              echo "Uploading models to MinIO..."
               /tmp/mc cp /tmp/stress-detection.xml myminio/s3-storage/models/stress-detection/1/
               /tmp/mc cp /tmp/stress-detection.bin myminio/s3-storage/models/stress-detection/1/
 
-              echo "✅ Subida completada."
+              echo "Upload completed."
           env:
             - name: MINIO_ROOT_USER
               valueFrom:
