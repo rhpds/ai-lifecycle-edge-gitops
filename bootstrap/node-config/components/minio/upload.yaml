@@ -7,28 +7,38 @@ spec:
   template:
     spec:
       containers:
-      - name: uploader
-        image: alpine:latest
-        command: ["/bin/sh", "-c"]
-        args:
-          - |
-            apk add --no-cache curl
-            wget https://github.com/dialvare/ai-lifecycle-edge/models/stress-detection/stress-detection.xml -O /tmp/stress-detection.xml
-            wget https://github.com/dialvare/ai-lifecycle-edge/models/stress-detection/stress-detection.bin -O /tmp/stress-detection.bin
-            apk add --no-cache mc
-            mc alias set myminio http://minio-service.minio.svc.cluster.local:9000 $MINIO_ROOT_USER $MINIO_ROOT_PASSWORD
-            mc cp /tmp/stress-detection.xml myminio/s3-storage/models/stress-detection/1/
-            mc cp /tmp/stress-detection.bin myminio/s3-storage/models/stress-detection/1/
-        env:
-        - name: MINIO_ROOT_USER
-          valueFrom:
-            secretKeyRef:
-              name: minio-secret
-              key: minio_root_user
-        - name: MINIO_ROOT_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: minio-secret
-              key: minio_root_password
-      restartPolicy: OnFailure
+        - name: uploader
+          image: alpine:latest
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              set -e
+              echo "Installing curl & wget..."
+              apk add --no-cache curl wget bash
 
+              echo "Downloading mc..."
+              wget https://dl.min.io/client/mc/release/linux-amd64/mc -O /usr/bin/mc
+              chmod +x /usr/bin/mc
+
+              echo "Downloading models from GitHub..."
+              wget https://raw.githubusercontent.com/dialvare/ai-lifecycle-edge/main/models/stress-detection/stress-detection.xml -O /tmp/stress-detection.xml
+              wget https://raw.githubusercontent.com/dialvare/ai-lifecycle-edge/main/models/stress-detection/stress-detection.bin -O /tmp/stress-detection.bin
+
+              echo "Configuring mc client..."
+              mc alias set myminio http://minio-service.minio.svc.cluster.local:9000 $MINIO_ROOT_USER $MINIO_ROOT_PASSWORD
+
+              echo "Uploading models to MinIO..."
+              mc cp /tmp/stress-detection.xml myminio/s3-storage/models/stress-detection/1/
+              mc cp /tmp/stress-detection.bin myminio/s3-storage/models/stress-detection/1/
+          env:
+            - name: MINIO_ROOT_USER
+              valueFrom:
+                secretKeyRef:
+                  name: minio-secret
+                  key: minio_root_user
+            - name: MINIO_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: minio-secret
+                  key: minio_root_password
+      restartPolicy: OnFailure
