@@ -6,32 +6,29 @@ metadata:
 spec:
   template:
     spec:
-      containers:
-        - name: uploader
-          image: alpine:latest
-          securityContext:
-            runAsUser: 0
+      volumes:
+        - name: mc-config
+          emptyDir: {}
+
+      initContainers:
+        - name: wait-for-buckets
+          image: minio/mc
           command: ["/bin/sh", "-c"]
           args:
             - |
-              set -e
-              echo "Instaling curl & wget..."
-              apk add --no-cache curl wget bash
+              echo "🕒 Esperando a que MinIO esté disponible..."
+              until mc alias set myminio http://minio-service.minio.svc.cluster.local:9000 $MINIO_ROOT_USER $MINIO_ROOT_PASSWORD; do
+                echo "⏳ Esperando conexión a MinIO..."
+                sleep 5
+              done
 
-              echo "Downloading mc..."
-              wget https://dl.min.io/client/mc/release/linux-amd64/mc -O /usr/bin/mc
-              chmod +x /usr/bin/mc
+              echo "📦 Verificando que los buckets existan..."
+              until mc ls myminio/s3-storage && mc ls myminio/pipelines; do
+                echo "⏳ Buckets aún no disponibles. Esperando..."
+                sleep 5
+              done
 
-              echo "Downloading models from GitHub..."
-              wget https://raw.githubusercontent.com/dialvare/ai-lifecycle-edge/main/models/stress-detection/stress-detection.xml -O /tmp/stress-detection.xml
-              wget https://raw.githubusercontent.com/dialvare/ai-lifecycle-edge/main/models/stress-detection/stress-detection.bin -O /tmp/stress-detection.bin
-
-              echo "Configuring mc client..."
-              mc alias set myminio http://minio-service.minio.svc.cluster.local:9000 $MINIO_ROOT_USER $MINIO_ROOT_PASSWORD
-
-              echo "Uploading models to MinIO..."
-              mc cp /tmp/stress-detection.xml myminio/s3-storage/models/stress-detection/1/
-              mc cp /tmp/stress-detection.bin myminio/s3-storage/models/stress-detection/1/
+              echo "✅ Buckets encontrados. Continuando..."
           env:
             - name: MINIO_ROOT_USER
               valueFrom:
@@ -43,4 +40,55 @@ spec:
                 secretKeyRef:
                   name: minio-secret
                   key: minio_root_password
+            - name: MC_CONFIG_DIR
+              value: /tmp/.mc
+          volumeMounts:
+            - name: mc-config
+              mountPath: /tmp/.mc
+
+      containers:
+        - name: uploader
+          image: alpine:latest
+          securityContext:
+            runAsUser: 0
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              set -e
+              echo "🔧 Instalando curl, wget y bash..."
+              apk add --no-cache curl wget bash
+
+              echo "⬇️ Descargando cliente mc..."
+              wget https://dl.min.io/client/mc/release/linux-amd64/mc -O /usr/bin/mc
+              chmod +x /usr/bin/mc
+
+              echo "⬇️ Descargando modelos desde GitHub..."
+              wget https://raw.githubusercontent.com/dialvare/ai-lifecycle-edge/main/models/stress-detection/stress-detection.xml -O /tmp/stress-detection.xml
+              wget https://raw.githubusercontent.com/dialvare/ai-lifecycle-edge/main/models/stress-detection/stress-detection.bin -O /tmp/stress-detection.bin
+
+              echo "🔐 Configurando acceso a MinIO..."
+              mc alias set myminio http://minio-service.minio.svc.cluster.local:9000 $MINIO_ROOT_USER $MINIO_ROOT_PASSWORD
+
+              echo "⬆️ Subiendo archivos a MinIO..."
+              mc cp /tmp/stress-detection.xml myminio/s3-storage/models/stress-detection/1/
+              mc cp /tmp/stress-detection.bin myminio/s3-storage/models/stress-detection/1/
+
+              echo "✅ Subida completada."
+          env:
+            - name: MINIO_ROOT_USER
+              valueFrom:
+                secretKeyRef:
+                  name: minio-secret
+                  key: minio_root_user
+            - name: MINIO_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: minio-secret
+                  key: minio_root_password
+            - name: MC_CONFIG_DIR
+              value: /tmp/.mc
+          volumeMounts:
+            - name: mc-config
+              mountPath: /tmp/.mc
+
       restartPolicy: OnFailure
