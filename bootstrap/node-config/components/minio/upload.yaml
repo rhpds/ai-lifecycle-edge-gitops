@@ -55,19 +55,19 @@ spec:
           args:
             - |
               echo "⬇️ Descargando cliente mc..."
-              wget https://dl.min.io/client/mc/release/linux-amd64/mc -O /usr/bin/mc
-              chmod +x /usr/bin/mc
+              wget https://dl.min.io/client/mc/release/linux-amd64/mc -O /tmp/mc
+              chmod +x /tmp/mc
 
               echo "⬇️ Descargando modelos desde GitHub..."
               wget https://raw.githubusercontent.com/dialvare/ai-lifecycle-edge/main/models/stress-detection/stress-detection.xml -O /tmp/stress-detection.xml
               wget https://raw.githubusercontent.com/dialvare/ai-lifecycle-edge/main/models/stress-detection/stress-detection.bin -O /tmp/stress-detection.bin
 
               echo "🔐 Configurando acceso a MinIO..."
-              mc alias set myminio http://minio-service.minio.svc.cluster.local:9000 $MINIO_ROOT_USER $MINIO_ROOT_PASSWORD
+              /tmp/mc alias set myminio http://minio-service.minio.svc.cluster.local:9000 $MINIO_ROOT_USER $MINIO_ROOT_PASSWORD
 
               echo "⬆️ Subiendo archivos a MinIO..."
-              mc cp /tmp/stress-detection.xml myminio/s3-storage/models/stress-detection/1/
-              mc cp /tmp/stress-detection.bin myminio/s3-storage/models/stress-detection/1/
+              /tmp/mc cp /tmp/stress-detection.xml myminio/s3-storage/models/stress-detection/1/
+              /tmp/mc cp /tmp/stress-detection.bin myminio/s3-storage/models/stress-detection/1/
 
               echo "✅ Subida completada."
           env:
