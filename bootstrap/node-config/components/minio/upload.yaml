@@ -50,7 +50,7 @@ spec:
         - name: uploader
           image: alpine:latest
           securityContext:
-            runAsUser: true
+            runAsNonRoot: true
           command: ["/bin/sh", "-c"]
           args:
             - |
