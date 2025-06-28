@@ -54,10 +54,6 @@ spec:
           command: ["/bin/sh", "-c"]
           args:
             - |
-              set -e
-              echo "🔧 Instalando curl, wget y bash..."
-              apk add --no-cache curl wget bash
-
               echo "⬇️ Descargando cliente mc..."
               wget https://dl.min.io/client/mc/release/linux-amd64/mc -O /usr/bin/mc
               chmod +x /usr/bin/mc
