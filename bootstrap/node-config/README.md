@@ -15,7 +15,7 @@ Create a new Argo application that points to `bootstrap/minio-storage/groups/dev
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: node-config
+  name: minio-storage
   namespace: openshift-gitops
 spec:
   destination:
