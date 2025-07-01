@@ -1,7 +1,7 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: node-config
+  name: minio-storage
   namespace: openshift-gitops
 spec:
   destination:
@@ -9,9 +9,9 @@ spec:
     namespace: ''
     server: https://kubernetes.default.svc
   source:
-    path: bootstrap/node-config/groups/dev
+    path: bootstrap/minio-storage/groups/dev
     repoURL: https://github.com/dialvare/ai-lifecycle-edge.git
-    targetRevision: HEAD
+    targetRevision: microshift
   sources: []
   project: default
   syncPolicy:
