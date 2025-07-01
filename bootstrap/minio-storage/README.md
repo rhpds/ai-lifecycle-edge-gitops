@@ -1,4 +1,4 @@
-# GitOps repo for stroage configuration
+# GitOps repo for MinIO storage configuration
 
 ## Components
 
