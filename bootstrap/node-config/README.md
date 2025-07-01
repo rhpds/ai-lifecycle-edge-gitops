@@ -9,7 +9,7 @@
 
 ## Installation
 
-Create a new Argo application that points to `bootstrap/node-config/groups/dev`.
+Create a new Argo application that points to `bootstrap/minio-storage/groups/dev`.
 
 ````yaml
 apiVersion: argoproj.io/v1alpha1
@@ -23,7 +23,7 @@ spec:
     namespace: ''
     server: https://kubernetes.default.svc
   source:
-    path: bootstrap/node-config/groups/dev
+    path: bootstrap/minio-storage/groups/dev
     repoURL: https://github.com/dialvare/ai-lifecycle-edge.git
     targetRevision: microshift
   sources: []
@@ -37,6 +37,6 @@ spec:
 Install the argo app:
 
 ````shellscript
-oc apply -f node-config.yaml -n openshift-gitops
+oc apply -f minio-storage.yaml -n openshift-gitops
 ````
 
