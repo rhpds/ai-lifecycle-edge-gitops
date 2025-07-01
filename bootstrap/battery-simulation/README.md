@@ -1,18 +1,17 @@
 # GitOps repo for battery-simulation demo
 
 ## Components
-
-- AMQ Broker Operator
-- AMQ Broker: Used as MQTT broker
+- Mosquitto: MQTT broker that receives the telemetry data coming from the emulated sensors.
 - Battery simulator: Quarkus component that simulates the battery of a driving electric vehicle. The BMS is sending telemetry data to the MQTT broker.
-- InfluxDB: Time series database, configured with auto setup
-- data-ingester: Quarkus component that reads data from MQTT and stores it InfluxDB
+- InfluxDB: Time series database, configured with auto setup.
+- influx-exporter: Scheduled task running every 10 minutes that collects the data stored in InfluxDB nd sends it to the a MinIO bucket.
+- data-ingester: Quarkus component that reads data from MQTT and stores it InfluxDB.
 - BMS Dashboard: Angular component that displays the battery telemetry data in realtime and serves as a frontend for a GenAI chatbot.
-- mqtt2ws: Camel Quarkus component that reads data from MQTT and exposes it as Websocket for the BMS Dashboard
+- mqtt2ws: Camel Quarkus component that reads data from MQTT and exposes it as Websocket for the BMS Dashboard.
 
 ## Installation
 
-First, modify the `groups/dev/files/config.json` file and replace `cluster-wwfmx.dynamic.redhatworkshops.io`, in the `BATTERY_METRICS_WS_ENDPOINT` variable with your cluster domain. 
+First, modify the `groups/dev/files/config.json` file and replace `.example.com`, in the `BATTERY_METRICS_WS_ENDPOINT` variable with your cluster domain. 
 
 Then, create a new Argo application that points to `bootstrap/battery-simulation/groups/dev`. It will install all the components in the `battery-demo` namespace
 
