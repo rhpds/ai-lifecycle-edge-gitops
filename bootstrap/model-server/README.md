@@ -1,5 +1,8 @@
 # GitOps repo for model serving configuration
 
+## Components
+- Server: component used for serving AI models for inference, including the ServingRuntime and InferenceService.  
+  
 ## Installation
 
 Create a new Argo application that points to `bootstrap/model-server/groups/dev`.
