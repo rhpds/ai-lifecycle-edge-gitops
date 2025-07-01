@@ -2,18 +2,20 @@
 
 ## Enhancing Battery Management and Operations in Electric Vehicles
 
-This demo showcases how the integration of AI and edge computing can effectively address specific use cases in the automotive industry. The demo will highlight the practical application of AI in resource-constrained environments, making it essential to use lightweight topologies and platforms such as Single Node OpenShift (SNO) and MicroShift. 
+This demo showcases how the integration of AI and edge computing can effectively address specific use cases in the automotive industry. The demo will highlight the practical application of AI in resource-constrained environments, making it essential to use lightweight topologies and platforms such as Single Node OpenShift (SNO) and Red Hat Device Edge (RHDE). We will develop a robust end-to-end solution, highlighting the importance of automation, as dedicated teams are usually not feasible at the edge.
 
-We will develop a robust end-to-end solution, highlighting the importance of automation, as dedicated teams are usually not feasible at the edge. To address this challenge, our solution incorporates key components within Red Hat OpenShift AI to support the entire AI/ML lifecycle at the edge, including model training, data science pipelines, model serving, and model monitoring. With all the infrastructure in place, we are going to address and resolve two key use cases:
+### Electric vehicle (RHDE)
+Inside our electric vehicle, we’ve deployed a RHEL machine running MicroShift. This machine is also equipped with MinIO storage. One bucket is used to store sensor data, while another is dedicated to storing AI models used for battery fault detection. Additionally, the AI Model Serving component has been deployed to load and serve the models for inference. By default, two baseline models are preloaded at startup. These will later be replaced by the retrained models coming from our Single Node OpenShift instance. Additionally, our Battery Monitoring System application will also run on this node, making use of the trained models to provide predictions through the infotainment system alonw with the data generated.
 
-### Battery Monitoring System
-In our SNO, we will run an application responsible for monitoring the health of the electric car battery. To achieve this, we will train and use two AI models to detect battery stress and predict the time this component could potentially fail. This prediction will be made based on simulated data from various parameters such as voltage, temperature, driving distance or velocity.
+### Re-training Node (SNO)
+This is a single-node deployment of OpenShift that will serve as the primary platform for training and validating our AI models in an automated manner thanks to Red Hat OpenShift AI. This operator is already deployed and configured with a Workbench that will be used to review and run the Nodebooks used for re-training. This single node is located outside our vehicle and will only be used when the vehicle is plugged into a chargin station. In that moment, the data will flow from the MinIO database in the MicroShift cluster to MinIO instance that is also deployed in our SNO.
 
-### Charging Optimization
-On an RHEL machine running MicroShift, we will deploy an application that interacts with the battery monitoring system to optimize charging patterns at an EV charging station. This application will use another AI model to enhance charging efficiency and extend battery lifespan.
+### Solution Workflow
+Sometimes, a picture is worth a thousand words. Below, you will find a diagram illustrating the main components involved in our solution:
+
+![Demo Diagram](https://raw.githubusercontent.com/dialvare/showroom-ai-lifecycle-edge/blob/microshift/content/modules/ROOT/assets/images/1-3_diagram.png)
 
 ## Lab instructions
-
 You can find the lab instructions in the following repository:
 
 ```
