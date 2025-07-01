@@ -1,11 +1,11 @@
-# GitOps repo for node configuration
+# GitOps repo for stroage configuration
 
 ## Components
 
-* MinIO: s3 storage used to accommodate data and models. Also to store artifacts generated when using pipelines. Therefore, two buckets are created:
-  
-  * `s3-storage`: used to store data and the new trained AI models.
-  * `pipelines`: used to store pipelines artifacts.
+* MinIO: s3 storage used to accommodate data and models. Therefore, two buckets are created:
+
+  * `s3-storage`: used to store telemetry data.
+  * `models`: used to store the new trained AI models.
 
 ## Installation
 
