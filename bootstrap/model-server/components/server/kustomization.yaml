@@ -11,5 +11,6 @@ resources:
 - ovms-kserve.yaml
 - secret.yaml
 - sa.yaml
-- inferenceservice.yaml
+- inferenceservice-stressdetection.yaml
+- inferenceservice-timefailure.yaml
 - route.yaml
