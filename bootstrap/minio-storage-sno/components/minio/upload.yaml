@@ -74,10 +74,10 @@ spec:
               /tmp/mc alias set myminio http://minio-service.minio.svc.cluster.local:9000 $MINIO_ROOT_USER $MINIO_ROOT_PASSWORD
 
               echo "Uploading models to MinIO..."
-              /tmp/mc cp /tmp/stress-detection.xml myminio/models/stress-detection/1/
-              /tmp/mc cp /tmp/stress-detection.bin myminio/models/stress-detection/1/
-              /tmp/mc cp /tmp/time-failure.xml myminio/models/time-failure/1/
-              /tmp/mc cp /tmp/time-failure.bin myminio/models/time-failure/1/
+              /tmp/mc cp /tmp/stress-detection.xml myminio/s3-storage/models/stress-detection/1/
+              /tmp/mc cp /tmp/stress-detection.bin myminio/s3-storage/models/stress-detection/1/
+              /tmp/mc cp /tmp/time-failure.xml myminio/s3-storage/models/time-failure/1/
+              /tmp/mc cp /tmp/time-failure.bin myminio/s3-storage/models/time-failure/1/
               
               echo "Upload completed."
           env:
