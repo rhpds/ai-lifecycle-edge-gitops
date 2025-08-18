@@ -1,0 +1,18 @@
+# Default values for bootstrap.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+deployer:
+  domain: apps.cluster.opentlc.com
+  apiUrl: https://api.cluster.opentlc.com:6443
+
+git:
+  url: https://github.com/dialvare/ai-lifecycle-edge
+  revision: microshift
+
+# Set to empty to NOT install the Minio SNO
+# minio-storage-sno: ''
+minio-storage-sno:
+  path: bootstrap/minio-storage-sno/groups/dev
+  namespace: minio
+
