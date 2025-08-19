@@ -8,11 +8,10 @@ deployer:
 
 git:
   url: https://github.com/dialvare/ai-lifecycle-edge
-  revision: microshift
+  revision: test
 
 # Set to empty to NOT install the Minio SNO
 # minio-storage-sno: ''
 minio-storage-sno:
-  path: bootstrap/minio-storage-sno/groups/dev
-  namespace: minio
+  enabled: true
 

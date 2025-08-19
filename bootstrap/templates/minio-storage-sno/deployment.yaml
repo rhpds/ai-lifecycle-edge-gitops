@@ -1,3 +1,4 @@
+{{- if .Values.minio-storage-sno.enabled }}
 kind: Deployment
 apiVersion: apps/v1
 metadata:
@@ -81,3 +82,4 @@ spec:
     type: Recreate
   revisionHistoryLimit: 10
   progressDeadlineSeconds: 600
+{{- end }}
