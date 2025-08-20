@@ -3,6 +3,7 @@ kind: Service
 apiVersion: v1
 metadata:
   name: minio-service
+  namespace: minio
   annotations:
     argocd.argoproj.io/sync-wave: "0"
 spec:

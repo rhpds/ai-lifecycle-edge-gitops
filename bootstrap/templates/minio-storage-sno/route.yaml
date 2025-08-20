@@ -3,6 +3,7 @@ kind: Route
 apiVersion: route.openshift.io/v1
 metadata:
   name: minio-api
+  namespace: minio
   annotations:
     argocd.argoproj.io/sync-wave: "0"
 spec:
@@ -21,6 +22,9 @@ kind: Route
 apiVersion: route.openshift.io/v1
 metadata:
   name: minio-ui
+  namespace: minio
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
 spec:
   to:
     kind: Service

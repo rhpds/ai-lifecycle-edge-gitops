@@ -3,6 +3,7 @@ kind: Deployment
 apiVersion: apps/v1
 metadata:
   name: minio
+  namespace: minio
   annotations:
     argocd.argoproj.io/sync-wave: "0"
 spec:

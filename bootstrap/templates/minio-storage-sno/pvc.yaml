@@ -3,6 +3,7 @@ kind: PersistentVolumeClaim
 apiVersion: v1
 metadata:
   name: minio-pvc
+  namespace: minio
   annotations:
     argocd.argoproj.io/sync-wave: "0"
 spec:

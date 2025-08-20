@@ -3,6 +3,7 @@ apiVersion: batch/v1
 kind: Job
 metadata:
   name: create-minio-buckets
+  namespace: minio
   annotations:
     argocd.argoproj.io/sync-wave: "1"
 spec:

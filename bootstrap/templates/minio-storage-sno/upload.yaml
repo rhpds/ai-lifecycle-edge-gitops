@@ -3,6 +3,7 @@ apiVersion: batch/v1
 kind: Job
 metadata:
   name: upload-models
+  namespace: minio
   annotations:
     argocd.argoproj.io/sync-wave: "1"
 spec:
