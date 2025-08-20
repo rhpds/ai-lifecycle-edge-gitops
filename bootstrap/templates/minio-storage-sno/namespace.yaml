@@ -1,4 +1,4 @@
-{{- if .Values.minio-storage-sno.enabled }}
+{{- if .Values.minioStorageSno.enabled }}
 kind: Namespace
 apiVersion: v1
 metadata:

@@ -12,6 +12,6 @@ git:
 
 # Set to empty to NOT install the Minio SNO
 # minio-storage-sno: ''
-minio-storage-sno:
+minioStorageSno:
   enabled: true
 
