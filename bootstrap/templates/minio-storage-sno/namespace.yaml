@@ -3,7 +3,6 @@ kind: Namespace
 apiVersion: v1
 metadata:
   name: minio
-  displayName: minio
   annotations:
     argocd.argoproj.io/sync-wave: "0"
   labels:
