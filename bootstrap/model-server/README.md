@@ -21,7 +21,7 @@ spec:
   source:
     path: bootstrap/model-server/groups/dev
     repoURL: https://github.com/dialvare/ai-lifecycle-edge.git
-    targetRevision: microshift
+    targetRevision: testt
   sources: []
   project: default
   syncPolicy:
