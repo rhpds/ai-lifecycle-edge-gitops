@@ -25,7 +25,7 @@ spec:
     spec:
       containers:
         - name: battery-simulation
-          image: 'quay.io/oschneid/battery-simulator-jvm:1.0'
+          image: 'quay.io/oschneid/battery-simulator-jvm:agv-1.0'
           ports:
             - containerPort: 8080
               protocol: TCP
