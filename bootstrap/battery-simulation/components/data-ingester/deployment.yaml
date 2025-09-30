@@ -24,7 +24,7 @@ spec:
     spec:
       containers:
         - name: data-ingester-jvm
-          image: 'quay.io/oschneid/data-ingester-jvm:1.0'
+          image: 'quay.io/oschneid/data-ingester-jvm:agv-1.0'
           ports:
             - containerPort: 8080
               protocol: TCP
