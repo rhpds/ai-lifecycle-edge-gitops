@@ -24,7 +24,7 @@ spec:
     spec:
       containers:
         - name: bms-dashboard
-          image: 'quay.io/oschneid/chatbot:1.0'
+          image: 'quay.io/oschneid/chatbot:agv-1.0'
           ports:
             - containerPort: 8080
               protocol: TCP
