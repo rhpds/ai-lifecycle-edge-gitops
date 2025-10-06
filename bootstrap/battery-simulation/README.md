@@ -29,7 +29,7 @@ spec:
   source:
     path: bootstrap/battery-simulation/groups/dev
     repoURL: https://github.com/dialvare/ai-lifecycle-edge.git
-    targetRevision: test
+    targetRevision: main
   sources: []
   project: default
   syncPolicy:
