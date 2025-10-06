@@ -10,15 +10,17 @@ metadata:
     app.kubernetes.io/part-of: bms-dashboard
 spec:
   ports:
-    - name: 8080-tcp
+    - name: http
       protocol: TCP
       port: 8080
       targetPort: 8080
-    - name: 8443-tcp
+      nodePort: 30080 
+    - name: https
       protocol: TCP
       port: 8443
       targetPort: 8443
-  type: ClusterIP
+      nodePort: 30443
+  type: NodePort
   selector:
     app: bms-dashboard
     deployment: bms-dashboard
