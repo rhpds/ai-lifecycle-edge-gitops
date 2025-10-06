@@ -1,0 +1,737 @@
+# PIPELINE DEFINITION
+# Name: battery-ml-pipeline
+# Description: Complete ML pipeline for battery stress detection and time-to-failure prediction
+# Inputs:
+#    aws_access_key_id: str [Default: 'minio']
+#    aws_s3_bucket: str [Default: 's3-storage']
+#    aws_s3_endpoint: str [Default: 'http://minio-service.minio.svc.cluster.local:9000']
+#    aws_secret_access_key: str [Default: 'minio123']
+#    influxdb_bucket: str [Default: 'bms']
+#    influxdb_org: str [Default: 'redhat']
+#    influxdb_token: str [Default: 'admin_token']
+#    influxdb_url: str [Default: 'https://influxdb-battery-demo.apps.sno.pemlab.rdu2.redhat.com/']
+components:
+  comp-predict-stress:
+    executorLabel: exec-predict-stress
+    inputDefinitions:
+      artifacts:
+        prepared_data:
+          artifactType:
+            schemaTitle: system.Dataset
+            schemaVersion: 0.0.1
+        stress_model:
+          artifactType:
+            schemaTitle: system.Model
+            schemaVersion: 0.0.1
+    outputDefinitions:
+      artifacts:
+        stress_predictions:
+          artifactType:
+            schemaTitle: system.Dataset
+            schemaVersion: 0.0.1
+      parameters:
+        high_stress_count:
+          parameterType: NUMBER_INTEGER
+  comp-predict-ttf:
+    executorLabel: exec-predict-ttf
+    inputDefinitions:
+      artifacts:
+        prepared_data:
+          artifactType:
+            schemaTitle: system.Dataset
+            schemaVersion: 0.0.1
+        ttf_model:
+          artifactType:
+            schemaTitle: system.Model
+            schemaVersion: 0.0.1
+    outputDefinitions:
+      artifacts:
+        ttf_predictions:
+          artifactType:
+            schemaTitle: system.Dataset
+            schemaVersion: 0.0.1
+      parameters:
+        avg_ttf_hours:
+          parameterType: NUMBER_DOUBLE
+  comp-prepare-data:
+    executorLabel: exec-prepare-data
+    inputDefinitions:
+      artifacts:
+        raw_data:
+          artifactType:
+            schemaTitle: system.Dataset
+            schemaVersion: 0.0.1
+    outputDefinitions:
+      artifacts:
+        prepared_data:
+          artifactType:
+            schemaTitle: system.Dataset
+            schemaVersion: 0.0.1
+      parameters:
+        prepared_records:
+          parameterType: NUMBER_INTEGER
+  comp-retrieve-influx-data:
+    executorLabel: exec-retrieve-influx-data
+    inputDefinitions:
+      parameters:
+        influxdb_bucket:
+          parameterType: STRING
+        influxdb_org:
+          parameterType: STRING
+        influxdb_token:
+          parameterType: STRING
+        influxdb_url:
+          parameterType: STRING
+    outputDefinitions:
+      artifacts:
+        raw_data:
+          artifactType:
+            schemaTitle: system.Dataset
+            schemaVersion: 0.0.1
+      parameters:
+        records_count:
+          parameterType: NUMBER_INTEGER
+  comp-save-models-to-s3:
+    executorLabel: exec-save-models-to-s3
+    inputDefinitions:
+      artifacts:
+        stress_model:
+          artifactType:
+            schemaTitle: system.Model
+            schemaVersion: 0.0.1
+        ttf_model:
+          artifactType:
+            schemaTitle: system.Model
+            schemaVersion: 0.0.1
+      parameters:
+        aws_access_key_id:
+          parameterType: STRING
+        aws_s3_bucket:
+          parameterType: STRING
+        aws_s3_endpoint:
+          parameterType: STRING
+        aws_secret_access_key:
+          parameterType: STRING
+    outputDefinitions:
+      parameters:
+        upload_status:
+          parameterType: STRING
+  comp-train-stress-detection-model:
+    executorLabel: exec-train-stress-detection-model
+    inputDefinitions:
+      artifacts:
+        prepared_data:
+          artifactType:
+            schemaTitle: system.Dataset
+            schemaVersion: 0.0.1
+    outputDefinitions:
+      artifacts:
+        stress_model:
+          artifactType:
+            schemaTitle: system.Model
+            schemaVersion: 0.0.1
+      parameters:
+        accuracy:
+          parameterType: NUMBER_DOUBLE
+        stress_events:
+          parameterType: NUMBER_INTEGER
+  comp-train-ttf-model:
+    executorLabel: exec-train-ttf-model
+    inputDefinitions:
+      artifacts:
+        prepared_data:
+          artifactType:
+            schemaTitle: system.Dataset
+            schemaVersion: 0.0.1
+    outputDefinitions:
+      artifacts:
+        ttf_model:
+          artifactType:
+            schemaTitle: system.Model
+            schemaVersion: 0.0.1
+      parameters:
+        mae:
+          parameterType: NUMBER_DOUBLE
+defaultPipelineRoot: gs://your-bucket/pipeline-root
+deploymentSpec:
+  executors:
+    exec-predict-stress:
+      container:
+        args:
+        - --executor_input
+        - '{{$}}'
+        - --function_to_execute
+        - predict_stress
+        command:
+        - sh
+        - -c
+        - "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip ||\
+          \ python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1\
+          \ python3 -m pip install --quiet --no-warn-script-location 'pandas' 'tensorflow'\
+          \ 'numpy'  &&  python3 -m pip install --quiet --no-warn-script-location\
+          \ 'kfp==2.14.4' '--no-deps' 'typing-extensions>=3.7.4,<5; python_version<\"\
+          3.9\"' && \"$0\" \"$@\"\n"
+        - sh
+        - -ec
+        - 'program_path=$(mktemp -d)
+
+
+          printf "%s" "$0" > "$program_path/ephemeral_component.py"
+
+          _KFP_RUNTIME=true python3 -m kfp.dsl.executor_main                         --component_module_path                         "$program_path/ephemeral_component.py"                         "$@"
+
+          '
+        - "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import\
+          \ *\n\ndef predict_stress(\n    stress_model: Input[Model],\n    prepared_data:\
+          \ Input[Dataset],\n    stress_predictions: Output[Dataset]\n) -> NamedTuple('Outputs',\
+          \ [('high_stress_count', int)]):\n    \"\"\"\n    Component 04: Predict\
+          \ stress using TensorFlow\n    \"\"\"\n    import pandas as pd\n    import\
+          \ numpy as np\n    import tensorflow as tf\n    import os\n\n    try:\n\
+          \        # Load Model\n        model_path = os.path.join(stress_model.path,\
+          \ \"saved_model\")\n\n        if os.path.exists(model_path):\n         \
+          \   model = tf.keras.models.load_model(model_path)\n\n            # Load\
+          \ test data\n            df = pd.read_csv(prepared_data.path)\n\n      \
+          \      # Prepare features\n            features = [\"stateOfCharge\", \"\
+          stateOfHealth\", \"batteryCurrent\", \"batteryVoltage\", \n            \
+          \           \"kmh\", \"distance\", \"batteryTemp\", \"ambientTemp\"]\n\n\
+          \            # Make predictions for all data\n            X = df[features].values.astype(np.float32)\n\
+          \            predictions = model.predict(X, verbose=0)\n\n            df['stress_prediction']\
+          \ = predictions.flatten()\n            df['high_stress'] = (df['stress_prediction']\
+          \ > 0.5).astype(int)\n\n            # Save predictions\n            df.to_csv(stress_predictions.path,\
+          \ index=False)\n\n            high_stress_count = df['high_stress'].sum()\n\
+          \            print(f\"Predicted {high_stress_count} high stress conditions\"\
+          )\n\n        else:\n            print(\"TensorFlow model not found, using\
+          \ dummy predictions\")\n            df = pd.read_csv(prepared_data.path)\n\
+          \            df['stress_prediction'] = 0.1  # Low stress\n            df['high_stress']\
+          \ = 0\n            df.to_csv(stress_predictions.path, index=False)\n   \
+          \         high_stress_count = 0\n\n    except Exception as e:\n        print(f\"\
+          Error in stress prediction: {e}\")\n        # Fallback\n        df = pd.read_csv(prepared_data.path)\n\
+          \        df['stress_prediction'] = 0.1\n        df['high_stress'] = 0\n\
+          \        df.to_csv(stress_predictions.path, index=False)\n        high_stress_count\
+          \ = 0\n\n    from collections import namedtuple\n    output = namedtuple('Outputs',\
+          \ ['high_stress_count'])\n    return output(int(high_stress_count))\n\n"
+        image: registry.access.redhat.com/ubi9/python-311:latest
+    exec-predict-ttf:
+      container:
+        args:
+        - --executor_input
+        - '{{$}}'
+        - --function_to_execute
+        - predict_ttf
+        command:
+        - sh
+        - -c
+        - "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip ||\
+          \ python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1\
+          \ python3 -m pip install --quiet --no-warn-script-location 'pandas' 'tensorflow'\
+          \ 'numpy'  &&  python3 -m pip install --quiet --no-warn-script-location\
+          \ 'kfp==2.14.4' '--no-deps' 'typing-extensions>=3.7.4,<5; python_version<\"\
+          3.9\"' && \"$0\" \"$@\"\n"
+        - sh
+        - -ec
+        - 'program_path=$(mktemp -d)
+
+
+          printf "%s" "$0" > "$program_path/ephemeral_component.py"
+
+          _KFP_RUNTIME=true python3 -m kfp.dsl.executor_main                         --component_module_path                         "$program_path/ephemeral_component.py"                         "$@"
+
+          '
+        - "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import\
+          \ *\n\ndef predict_ttf(\n    ttf_model: Input[Model],\n    prepared_data:\
+          \ Input[Dataset],\n    ttf_predictions: Output[Dataset]\n) -> NamedTuple('Outputs',\
+          \ [('avg_ttf_hours', float)]):\n    \"\"\"\n    Component 06: Predict time-to-failure\
+          \ using TensorFlow\n    \"\"\"\n    import pandas as pd\n    import numpy\
+          \ as np\n    import tensorflow as tf\n    import os\n\n    try:\n      \
+          \  # Load Model\n        model_path = os.path.join(ttf_model.path, \"saved_model\"\
+          )\n\n        if os.path.exists(model_path):\n            model = tf.keras.models.load_model(model_path)\n\
+          \n            # Load test data\n            df = pd.read_csv(prepared_data.path)\n\
+          \n            # Prepare features for TTF\n            features = [\"batteryTemp\"\
+          , \"batteryCurrent\", \"batteryVoltage\", \"stateOfCharge\", \"stateOfHealth\"\
+          ]\n\n            # Make predictions for all data\n            X = df[features].values.astype(np.float32)\n\
+          \            predictions = model.predict(X, verbose=0)\n\n            df['ttf_prediction_hours']\
+          \ = predictions.flatten()\n\n            # Save predictions\n          \
+          \  df.to_csv(ttf_predictions.path, index=False)\n\n            avg_ttf =\
+          \ np.mean(predictions)\n            print(f\"Average predicted TTF: {avg_ttf:.2f}\
+          \ hours\")\n\n        else:\n            print(\"TensorFlow TTF model not\
+          \ found, using dummy predictions\")\n            df = pd.read_csv(prepared_data.path)\n\
+          \            df['ttf_prediction_hours'] = 100.0  # Default 100 hours\n \
+          \           df.to_csv(ttf_predictions.path, index=False)\n            avg_ttf\
+          \ = 100.0\n\n    except Exception as e:\n        print(f\"Error in TTF prediction:\
+          \ {e}\")\n        # Fallback\n        df = pd.read_csv(prepared_data.path)\n\
+          \        df['ttf_prediction_hours'] = 100.0\n        df.to_csv(ttf_predictions.path,\
+          \ index=False)\n        avg_ttf = 100.0\n\n    from collections import namedtuple\n\
+          \    output = namedtuple('Outputs', ['avg_ttf_hours'])\n    return output(float(avg_ttf))\n\
+          \n"
+        image: registry.access.redhat.com/ubi9/python-311:latest
+    exec-prepare-data:
+      container:
+        args:
+        - --executor_input
+        - '{{$}}'
+        - --function_to_execute
+        - prepare_data
+        command:
+        - sh
+        - -c
+        - "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip ||\
+          \ python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1\
+          \ python3 -m pip install --quiet --no-warn-script-location 'pandas'  &&\
+          \  python3 -m pip install --quiet --no-warn-script-location 'kfp==2.14.4'\
+          \ '--no-deps' 'typing-extensions>=3.7.4,<5; python_version<\"3.9\"' && \"\
+          $0\" \"$@\"\n"
+        - sh
+        - -ec
+        - 'program_path=$(mktemp -d)
+
+
+          printf "%s" "$0" > "$program_path/ephemeral_component.py"
+
+          _KFP_RUNTIME=true python3 -m kfp.dsl.executor_main                         --component_module_path                         "$program_path/ephemeral_component.py"                         "$@"
+
+          '
+        - "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import\
+          \ *\n\ndef prepare_data(\n    raw_data: Input[Dataset],\n    prepared_data:\
+          \ Output[Dataset]\n) -> NamedTuple('Outputs', [('prepared_records', int)]):\n\
+          \    \"\"\"\n    Component 02: Prepare data by pivoting columns\n    \"\"\
+          \"\n    import pandas as pd\n\n    # Load InfluxDB CSV Data\n    df = pd.read_csv(raw_data.path)\n\
+          \n    # Pivot the data so that '_field' values become columns\n    df_pivot\
+          \ = df.pivot(index=[\"_time\", \"batteryId\"], columns=\"_field\", values=\"\
+          _value\").reset_index()\n\n    # Rename `_time` to `timestamp` for clarity\n\
+          \    df_pivot.rename(columns={\"_time\": \"timestamp\"}, inplace=True)\n\
+          \n    # Save prepared data\n    df_pivot.to_csv(prepared_data.path, index=False)\n\
+          \n    print(f\"Prepared {len(df_pivot)} records\")\n    print(\"Data columns:\"\
+          , list(df_pivot.columns))\n\n    from collections import namedtuple\n  \
+          \  output = namedtuple('Outputs', ['prepared_records'])\n    return output(len(df_pivot))\n\
+          \n"
+        image: registry.access.redhat.com/ubi9/python-311:latest
+    exec-retrieve-influx-data:
+      container:
+        args:
+        - --executor_input
+        - '{{$}}'
+        - --function_to_execute
+        - retrieve_influx_data
+        command:
+        - sh
+        - -c
+        - "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip ||\
+          \ python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1\
+          \ python3 -m pip install --quiet --no-warn-script-location 'pandas' 'influxdb-client'\
+          \  &&  python3 -m pip install --quiet --no-warn-script-location 'kfp==2.14.4'\
+          \ '--no-deps' 'typing-extensions>=3.7.4,<5; python_version<\"3.9\"' && \"\
+          $0\" \"$@\"\n"
+        - sh
+        - -ec
+        - 'program_path=$(mktemp -d)
+
+
+          printf "%s" "$0" > "$program_path/ephemeral_component.py"
+
+          _KFP_RUNTIME=true python3 -m kfp.dsl.executor_main                         --component_module_path                         "$program_path/ephemeral_component.py"                         "$@"
+
+          '
+        - "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import\
+          \ *\n\ndef retrieve_influx_data(\n    influxdb_url: str,\n    influxdb_token:\
+          \ str,\n    influxdb_org: str,\n    influxdb_bucket: str,\n    raw_data:\
+          \ Output[Dataset]\n) -> NamedTuple('Outputs', [('records_count', int)]):\n\
+          \    \"\"\"\n    Component 01: Retrieve data from InfluxDB\n    \"\"\"\n\
+          \    from influxdb_client import InfluxDBClient\n    import pandas as pd\n\
+          \    import os\n\n    # Initialize Client (disable SSL verification for\
+          \ self-signed certificates)\n    client = InfluxDBClient(url=influxdb_url,\
+          \ token=influxdb_token, org=influxdb_org, verify_ssl=False)\n\n    def retrieve_battery_data():\n\
+          \        query = f'''\n        from(bucket: \"{influxdb_bucket}\")\n   \
+          \       |> range(start: -1h)\n          |> filter(fn: (r) => r[\"_measurement\"\
+          ] == \"battery_data\")\n        '''\n        query_api = client.query_api()\n\
+          \        tables = query_api.query(query, org=influxdb_org)\n\n        #\
+          \ Process Results\n        data = []\n        for table in tables:\n   \
+          \         for record in table.records:\n                data.append(record.values)\n\
+          \n        df = pd.DataFrame(data)\n        return df\n\n    try:\n     \
+          \   df = retrieve_battery_data()\n        # Save raw data\n        df.to_csv(raw_data.path,\
+          \ index=False)\n        records_count = len(df)\n        print(f\"Retrieved\
+          \ {records_count} records from InfluxDB\")\n\n    except Exception as e:\n\
+          \        print(f\"Error connecting to InfluxDB: {e}\")\n        # Fallback:\
+          \ use sample data\n        print(\"Using fallback sample data...\")\n  \
+          \      sample_data = {\n            '_time': ['2025-02-12 14:26:34.190000+00:00']\
+          \ * 10,\n            'batteryId': [1] * 10,\n            '_field': ['ambientTemp',\
+          \ 'batteryCurrent', 'batteryTemp', 'batteryVoltage', \n                \
+          \      'distance', 'kmh', 'stateOfCharge', 'stateOfHealth'] * 1 + ['ambientTemp',\
+          \ 'batteryCurrent'],\n            '_value': [18.65, 78.06, 25.22, 396.39,\
+          \ 0.2, 127.75, 0.9991, 99.9998, 18.36, 81.42]\n        }\n        df = pd.DataFrame(sample_data)\n\
+          \        df.to_csv(raw_data.path, index=False)\n        records_count =\
+          \ len(df)\n\n    client.close()\n\n    from collections import namedtuple\n\
+          \    output = namedtuple('Outputs', ['records_count'])\n    return output(records_count)\n\
+          \n"
+        image: registry.access.redhat.com/ubi9/python-311:latest
+    exec-save-models-to-s3:
+      container:
+        args:
+        - --executor_input
+        - '{{$}}'
+        - --function_to_execute
+        - save_models_to_s3
+        command:
+        - sh
+        - -c
+        - "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip ||\
+          \ python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1\
+          \ python3 -m pip install --quiet --no-warn-script-location 'boto3'  && \
+          \ python3 -m pip install --quiet --no-warn-script-location 'kfp==2.14.4'\
+          \ '--no-deps' 'typing-extensions>=3.7.4,<5; python_version<\"3.9\"' && \"\
+          $0\" \"$@\"\n"
+        - sh
+        - -ec
+        - 'program_path=$(mktemp -d)
+
+
+          printf "%s" "$0" > "$program_path/ephemeral_component.py"
+
+          _KFP_RUNTIME=true python3 -m kfp.dsl.executor_main                         --component_module_path                         "$program_path/ephemeral_component.py"                         "$@"
+
+          '
+        - "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import\
+          \ *\n\ndef save_models_to_s3(\n    stress_model: Input[Model],\n    ttf_model:\
+          \ Input[Model],\n    aws_access_key_id: str,\n    aws_secret_access_key:\
+          \ str,\n    aws_s3_endpoint: str,\n    aws_s3_bucket: str\n) -> NamedTuple('Outputs',\
+          \ [('upload_status', str)]):\n    \"\"\"\n    Component 07: Save models\
+          \ to S3\n    \"\"\"\n    import boto3\n    import os\n    from botocore.exceptions\
+          \ import ClientError\n\n    try:\n        # Create s3 connection\n     \
+          \   s3_client = boto3.client(\n            's3',\n            aws_access_key_id=aws_access_key_id,\n\
+          \            aws_secret_access_key=aws_secret_access_key,\n            endpoint_url=aws_s3_endpoint\n\
+          \        )\n\n        # Upload stress model to models/stress-detection/1/\n\
+          \        stress_model_files = []\n        for root, dirs, files in os.walk(stress_model.path):\n\
+          \            for file in files:\n                file_path = os.path.join(root,\
+          \ file)\n                s3_key = f\"models/stress-detection/1/{os.path.relpath(file_path,\
+          \ stress_model.path)}\"\n                s3_client.upload_file(file_path,\
+          \ aws_s3_bucket, s3_key)\n                stress_model_files.append(s3_key)\n\
+          \n        # Upload TTF model to models/time-to-failure/1/\n        ttf_model_files\
+          \ = []\n        for root, dirs, files in os.walk(ttf_model.path):\n    \
+          \        for file in files:\n                file_path = os.path.join(root,\
+          \ file)\n                s3_key = f\"models/time-to-failure/1/{os.path.relpath(file_path,\
+          \ ttf_model.path)}\"\n                s3_client.upload_file(file_path, aws_s3_bucket,\
+          \ s3_key)\n                ttf_model_files.append(s3_key)\n\n        status\
+          \ = f\"Successfully uploaded {len(stress_model_files)} stress model files\
+          \ and {len(ttf_model_files)} TTF model files to S3\"\n        print(status)\n\
+          \n    except ClientError as e:\n        status = f\"Error uploading to S3:\
+          \ {e}\"\n        print(status)\n    except Exception as e:\n        status\
+          \ = f\"Unexpected error: {e}\"\n        print(status)\n\n    from collections\
+          \ import namedtuple\n    output = namedtuple('Outputs', ['upload_status'])\n\
+          \    return output(status)\n\n"
+        image: registry.access.redhat.com/ubi9/python-311:latest
+    exec-train-stress-detection-model:
+      container:
+        args:
+        - --executor_input
+        - '{{$}}'
+        - --function_to_execute
+        - train_stress_detection_model
+        command:
+        - sh
+        - -c
+        - "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip ||\
+          \ python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1\
+          \ python3 -m pip install --quiet --no-warn-script-location 'pandas' 'scikit-learn'\
+          \ 'tensorflow' 'openvino-dev==2024.6.0'  &&  python3 -m pip install --quiet\
+          \ --no-warn-script-location 'kfp==2.14.4' '--no-deps' 'typing-extensions>=3.7.4,<5;\
+          \ python_version<\"3.9\"' && \"$0\" \"$@\"\n"
+        - sh
+        - -ec
+        - 'program_path=$(mktemp -d)
+
+
+          printf "%s" "$0" > "$program_path/ephemeral_component.py"
+
+          _KFP_RUNTIME=true python3 -m kfp.dsl.executor_main                         --component_module_path                         "$program_path/ephemeral_component.py"                         "$@"
+
+          '
+        - "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import\
+          \ *\n\ndef train_stress_detection_model(\n    prepared_data: Input[Dataset],\n\
+          \    stress_model: Output[Model]\n) -> NamedTuple('Outputs', [('accuracy',\
+          \ float), ('stress_events', int)]):\n    \"\"\"\n    Component 03: Train\
+          \ stress detection model with OpenVINO conversion\n    \"\"\"\n    import\
+          \ pandas as pd\n    from sklearn.model_selection import train_test_split\n\
+          \    from sklearn.preprocessing import StandardScaler\n    import tensorflow\
+          \ as tf\n    from tensorflow import keras\n    import os\n\n    # Force\
+          \ CPU usage to avoid CUDA issues\n    os.environ['CUDA_VISIBLE_DEVICES']\
+          \ = '-1'\n\n    # Load data\n    df = pd.read_csv(prepared_data.path)\n\n\
+          \    # Define stress condition (1 = Stress, 0 = Normal)\n    def detect_stress(row):\n\
+          \        if row[\"batteryCurrent\"] > 400 or row[\"batteryTemp\"] > 50 or\
+          \ row[\"stateOfCharge\"] < 0.05 or row[\"batteryVoltage\"] < 320:\n    \
+          \        return 1  # Stress condition\n        return 0  # Normal condition\n\
+          \n    # Apply stress detection\n    df[\"stressIndicator\"] = df.apply(detect_stress,\
+          \ axis=1)\n    stress_events = df[\"stressIndicator\"].sum()\n\n    # Define\
+          \ Features and Target\n    features = [\"stateOfCharge\", \"stateOfHealth\"\
+          , \"batteryCurrent\", \"batteryVoltage\", \n                \"kmh\", \"\
+          distance\", \"batteryTemp\", \"ambientTemp\"]\n    X = df[features]\n  \
+          \  y = df[\"stressIndicator\"]\n\n    # Split Data\n    X_train, X_test,\
+          \ y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)\n\
+          \n    # Normalize data\n    scaler = StandardScaler()\n    X_train_scaled\
+          \ = scaler.fit_transform(X_train)\n    X_test_scaled = scaler.transform(X_test)\n\
+          \n    # Define neural network\n    mlp_tf = keras.Sequential([\n       \
+          \ keras.layers.Input(shape=(X_train.shape[1],)),\n        keras.layers.Dense(64,\
+          \ activation='relu'),\n        keras.layers.Dense(32, activation='relu'),\n\
+          \        keras.layers.Dense(1, activation='sigmoid')\n    ])\n\n    # Compile\
+          \ model\n    mlp_tf.compile(optimizer='adam', loss='binary_crossentropy',\
+          \ metrics=['accuracy'])\n\n    # Train model\n    history = mlp_tf.fit(X_train_scaled,\
+          \ y_train, epochs=50, batch_size=32, \n                        validation_split=0.1,\
+          \ verbose=0)\n\n    # Evaluate model\n    test_loss, test_accuracy = mlp_tf.evaluate(X_test_scaled,\
+          \ y_test, verbose=0)\n\n    # Create model directory and save\n    model_dir\
+          \ = stress_model.path\n    os.makedirs(model_dir, exist_ok=True)\n\n   \
+          \ # Save as SavedModel format first\n    saved_model_path = os.path.join(model_dir,\
+          \ \"saved_model\")\n    tf.saved_model.save(mlp_tf, saved_model_path)\n\n\
+          \    # Convert to OpenVINO format\n    try:\n        import subprocess\n\
+          \        cmd = f\"mo --saved_model_dir {saved_model_path} --output_dir {model_dir}\"\
+          \n        subprocess.run(cmd, shell=True, check=True, capture_output=True,\
+          \ text=True)\n        print(\"Model converted to OpenVINO format (.xml/.bin)\"\
+          )\n    except subprocess.CalledProcessError as e:\n        print(f\"OpenVINO\
+          \ conversion failed: {e}\")\n        print(\"Model saved in TensorFlow format\
+          \ only\")\n    except Exception as e:\n        print(f\"OpenVINO conversion\
+          \ error: {e}\")\n\n    print(f\"Stress detection model trained with accuracy:\
+          \ {test_accuracy:.4f}\")\n    print(f\"Detected {stress_events} stress events\"\
+          )\n\n    from collections import namedtuple\n    output = namedtuple('Outputs',\
+          \ ['accuracy', 'stress_events'])\n    return output(float(test_accuracy),\
+          \ int(stress_events))\n\n"
+        image: registry.access.redhat.com/ubi9/python-311:latest
+    exec-train-ttf-model:
+      container:
+        args:
+        - --executor_input
+        - '{{$}}'
+        - --function_to_execute
+        - train_ttf_model
+        command:
+        - sh
+        - -c
+        - "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip ||\
+          \ python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1\
+          \ python3 -m pip install --quiet --no-warn-script-location 'pandas' 'scikit-learn'\
+          \ 'tensorflow' 'openvino-dev==2024.6.0'  &&  python3 -m pip install --quiet\
+          \ --no-warn-script-location 'kfp==2.14.4' '--no-deps' 'typing-extensions>=3.7.4,<5;\
+          \ python_version<\"3.9\"' && \"$0\" \"$@\"\n"
+        - sh
+        - -ec
+        - 'program_path=$(mktemp -d)
+
+
+          printf "%s" "$0" > "$program_path/ephemeral_component.py"
+
+          _KFP_RUNTIME=true python3 -m kfp.dsl.executor_main                         --component_module_path                         "$program_path/ephemeral_component.py"                         "$@"
+
+          '
+        - "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import\
+          \ *\n\ndef train_ttf_model(\n    prepared_data: Input[Dataset],\n    ttf_model:\
+          \ Output[Model]\n) -> NamedTuple('Outputs', [('mae', float)]):\n    \"\"\
+          \"\n    Component 05: Train time-to-failure (TTF) model\n    \"\"\"\n  \
+          \  import pandas as pd\n    from sklearn.model_selection import train_test_split\n\
+          \    from sklearn.metrics import mean_absolute_error\n    from sklearn.preprocessing\
+          \ import StandardScaler\n    import tensorflow as tf\n    from tensorflow\
+          \ import keras\n    import os\n\n    # Force CPU usage\n    os.environ['CUDA_VISIBLE_DEVICES']\
+          \ = '-1'\n\n    # Load data\n    df = pd.read_csv(prepared_data.path)\n\n\
+          \    # Convert timestamp to datetime for time-series processing\n    df[\"\
+          timestamp\"] = pd.to_datetime(df[\"timestamp\"])\n\n    # Simulate Time-to-Failure\
+          \ (assuming failure happens at the last recorded timestamp)\n    df[\"timeBeforeFailure\"\
+          ] = (df[\"timestamp\"].max() - df[\"timestamp\"]).dt.total_seconds() / 3600\
+          \  # Convert to hours\n\n    # Define Features and Target for TTF\n    features\
+          \ = [\"batteryTemp\", \"batteryCurrent\", \"batteryVoltage\", \"stateOfCharge\"\
+          , \"stateOfHealth\"]\n    X = df[features]\n    y = df[\"timeBeforeFailure\"\
+          ]\n\n    # Split Data\n    X_train, X_test, y_train, y_test = train_test_split(X,\
+          \ y, test_size=0.2, random_state=42)\n\n    # Normalize data\n    scaler\
+          \ = StandardScaler()\n    X_train_scaled = scaler.fit_transform(X_train)\n\
+          \    X_test_scaled = scaler.transform(X_test)\n\n    # Define neural network\
+          \ for regression\n    ttf_model_tf = keras.Sequential([\n        keras.layers.Input(shape=(X_train.shape[1],)),\n\
+          \        keras.layers.Dense(64, activation='relu'),\n        keras.layers.Dense(32,\
+          \ activation='relu'),\n        keras.layers.Dense(1)  # No activation for\
+          \ regression\n    ])\n\n    # Compile model\n    ttf_model_tf.compile(optimizer='adam',\
+          \ loss='mae', metrics=['mae'])\n\n    # Train model\n    history = ttf_model_tf.fit(X_train_scaled,\
+          \ y_train, epochs=50, batch_size=32, \n                              validation_split=0.1,\
+          \ verbose=0)\n\n    # Evaluate model\n    y_pred = ttf_model_tf.predict(X_test_scaled,\
+          \ verbose=0)\n    mae = mean_absolute_error(y_test, y_pred)\n\n    # Create\
+          \ model directory and save\n    model_dir = ttf_model.path\n    os.makedirs(model_dir,\
+          \ exist_ok=True)\n\n    # Save as SavedModel format first\n    saved_model_path\
+          \ = os.path.join(model_dir, \"saved_model\")\n    tf.saved_model.save(ttf_model_tf,\
+          \ saved_model_path)\n\n    # Convert to OpenVINO format\n    try:\n    \
+          \    import subprocess\n        cmd = f\"mo --saved_model_dir {saved_model_path}\
+          \ --output_dir {model_dir}\"\n        subprocess.run(cmd, shell=True, check=True,\
+          \ capture_output=True, text=True)\n        print(\"TTF model converted to\
+          \ OpenVINO format (.xml/.bin)\")\n    except subprocess.CalledProcessError\
+          \ as e:\n        print(f\"OpenVINO conversion failed: {e}\")\n        print(\"\
+          TTF model saved in TensorFlow format only\")\n    except Exception as e:\n\
+          \        print(f\"OpenVINO conversion error: {e}\")\n\n    print(f\"TTF\
+          \ model trained with MAE: {mae:.4f} hours\")\n\n    from collections import\
+          \ namedtuple\n    output = namedtuple('Outputs', ['mae'])\n    return output(float(mae))\n\
+          \n"
+        image: registry.access.redhat.com/ubi9/python-311:latest
+pipelineInfo:
+  description: Complete ML pipeline for battery stress detection and time-to-failure
+    prediction
+  name: battery-ml-pipeline
+root:
+  dag:
+    tasks:
+      predict-stress:
+        cachingOptions:
+          enableCache: true
+        componentRef:
+          name: comp-predict-stress
+        dependentTasks:
+        - prepare-data
+        - train-stress-detection-model
+        inputs:
+          artifacts:
+            prepared_data:
+              taskOutputArtifact:
+                outputArtifactKey: prepared_data
+                producerTask: prepare-data
+            stress_model:
+              taskOutputArtifact:
+                outputArtifactKey: stress_model
+                producerTask: train-stress-detection-model
+        taskInfo:
+          name: predict-stress
+      predict-ttf:
+        cachingOptions:
+          enableCache: true
+        componentRef:
+          name: comp-predict-ttf
+        dependentTasks:
+        - prepare-data
+        - train-ttf-model
+        inputs:
+          artifacts:
+            prepared_data:
+              taskOutputArtifact:
+                outputArtifactKey: prepared_data
+                producerTask: prepare-data
+            ttf_model:
+              taskOutputArtifact:
+                outputArtifactKey: ttf_model
+                producerTask: train-ttf-model
+        taskInfo:
+          name: predict-ttf
+      prepare-data:
+        cachingOptions:
+          enableCache: true
+        componentRef:
+          name: comp-prepare-data
+        dependentTasks:
+        - retrieve-influx-data
+        inputs:
+          artifacts:
+            raw_data:
+              taskOutputArtifact:
+                outputArtifactKey: raw_data
+                producerTask: retrieve-influx-data
+        taskInfo:
+          name: prepare-data
+      retrieve-influx-data:
+        cachingOptions:
+          enableCache: true
+        componentRef:
+          name: comp-retrieve-influx-data
+        inputs:
+          parameters:
+            influxdb_bucket:
+              componentInputParameter: influxdb_bucket
+            influxdb_org:
+              componentInputParameter: influxdb_org
+            influxdb_token:
+              componentInputParameter: influxdb_token
+            influxdb_url:
+              componentInputParameter: influxdb_url
+        taskInfo:
+          name: retrieve-influx-data
+      save-models-to-s3:
+        cachingOptions:
+          enableCache: true
+        componentRef:
+          name: comp-save-models-to-s3
+        dependentTasks:
+        - train-stress-detection-model
+        - train-ttf-model
+        inputs:
+          artifacts:
+            stress_model:
+              taskOutputArtifact:
+                outputArtifactKey: stress_model
+                producerTask: train-stress-detection-model
+            ttf_model:
+              taskOutputArtifact:
+                outputArtifactKey: ttf_model
+                producerTask: train-ttf-model
+          parameters:
+            aws_access_key_id:
+              componentInputParameter: aws_access_key_id
+            aws_s3_bucket:
+              componentInputParameter: aws_s3_bucket
+            aws_s3_endpoint:
+              componentInputParameter: aws_s3_endpoint
+            aws_secret_access_key:
+              componentInputParameter: aws_secret_access_key
+        taskInfo:
+          name: save-models-to-s3
+      train-stress-detection-model:
+        cachingOptions:
+          enableCache: true
+        componentRef:
+          name: comp-train-stress-detection-model
+        dependentTasks:
+        - prepare-data
+        inputs:
+          artifacts:
+            prepared_data:
+              taskOutputArtifact:
+                outputArtifactKey: prepared_data
+                producerTask: prepare-data
+        taskInfo:
+          name: train-stress-detection-model
+      train-ttf-model:
+        cachingOptions:
+          enableCache: true
+        componentRef:
+          name: comp-train-ttf-model
+        dependentTasks:
+        - prepare-data
+        inputs:
+          artifacts:
+            prepared_data:
+              taskOutputArtifact:
+                outputArtifactKey: prepared_data
+                producerTask: prepare-data
+        taskInfo:
+          name: train-ttf-model
+  inputDefinitions:
+    parameters:
+      aws_access_key_id:
+        defaultValue: minio
+        isOptional: true
+        parameterType: STRING
+      aws_s3_bucket:
+        defaultValue: s3-storage
+        isOptional: true
+        parameterType: STRING
+      aws_s3_endpoint:
+        defaultValue: http://minio-service.minio.svc.cluster.local:9000
+        isOptional: true
+        parameterType: STRING
+      aws_secret_access_key:
+        defaultValue: minio123
+        isOptional: true
+        parameterType: STRING
+      influxdb_bucket:
+        defaultValue: bms
+        isOptional: true
+        parameterType: STRING
+      influxdb_org:
+        defaultValue: redhat
+        isOptional: true
+        parameterType: STRING
+      influxdb_token:
+        defaultValue: admin_token
+        isOptional: true
+        parameterType: STRING
+      influxdb_url:
+        defaultValue: https://influxdb-battery-demo.apps.sno.pemlab.rdu2.redhat.com/
+        isOptional: true
+        parameterType: STRING
+schemaVersion: 2.1.0
+sdkVersion: kfp-2.14.4
