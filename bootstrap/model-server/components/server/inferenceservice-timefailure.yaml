@@ -1,0 +1,15 @@
+apiVersion: serving.kserve.io/v1beta1
+kind: InferenceService
+metadata:
+  name: time-failure
+spec:
+  predictor:
+    serviceAccountName: sa-s3-minio
+    model:
+      protocolVersion: v2
+      modelFormat:
+        name: openvino_ir
+      storageUri: "s3://models/time-failure/"
+#      args:
+#        - --layout=NHWC:NCHW
+

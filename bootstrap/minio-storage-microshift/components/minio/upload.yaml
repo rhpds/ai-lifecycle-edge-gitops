@@ -1,0 +1,94 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: upload-models
+  namespace: minio
+spec:
+  template:
+    spec:
+      volumes:
+        - name: mc-config
+          emptyDir: {}
+
+      initContainers:
+        - name: wait-for-buckets
+          image: minio/mc
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              echo "Waiting for MinIO to become available..."
+              until mc alias set myminio http://minio-service.minio.svc.cluster.local:9000 $MINIO_ROOT_USER $MINIO_ROOT_PASSWORD; do
+                echo "Waiting for a MinIO connection..."
+                sleep 5
+              done
+
+              echo "Verifying existing buckets..."
+              until mc ls myminio/storage && mc ls myminio/models; do
+                echo "Buckets not available yet. Waiting..."
+                sleep 5
+              done
+
+              echo "Buckets found..."
+          env:
+            - name: MINIO_ROOT_USER
+              valueFrom:
+                secretKeyRef:
+                  name: minio-secret
+                  key: minio_root_user
+            - name: MINIO_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: minio-secret
+                  key: minio_root_password
+            - name: MC_CONFIG_DIR
+              value: /tmp/.mc
+          volumeMounts:
+            - name: mc-config
+              mountPath: /tmp/.mc
+
+      containers:
+        - name: uploader
+          image: curlimages/curl:latest
+          securityContext:
+            runAsNonRoot: true
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              echo "Downloading mc client..."
+              wget https://dl.min.io/client/mc/release/linux-amd64/mc -O /tmp/mc
+              chmod +x /tmp/mc
+
+              echo "Downloading models from GitHub..."
+              wget https://raw.githubusercontent.com/dialvare/ai-lifecycle-edge/test/models/stress-detection/stress-detection.xml -O /tmp/stress-detection.xml
+              wget https://raw.githubusercontent.com/dialvare/ai-lifecycle-edge/test/models/stress-detection/stress-detection.bin -O /tmp/stress-detection.bin
+              wget https://raw.githubusercontent.com/dialvare/ai-lifecycle-edge/test/models/time-failure/time-failure.xml -O /tmp/time-failure.xml
+              wget https://raw.githubusercontent.com/dialvare/ai-lifecycle-edge/test/models/time-failure/time-failure.bin -O /tmp/time-failure.bin
+
+              echo "Configuring MinIO access..."
+              /tmp/mc alias set myminio http://minio-service.minio.svc.cluster.local:9000 $MINIO_ROOT_USER $MINIO_ROOT_PASSWORD
+
+              echo "Uploading models to MinIO..."
+              /tmp/mc cp /tmp/stress-detection.xml myminio/models/stress-detection/1/
+              /tmp/mc cp /tmp/stress-detection.bin myminio/models/stress-detection/1/
+              /tmp/mc cp /tmp/time-failure.xml myminio/models/time-failure/1/
+              /tmp/mc cp /tmp/time-failure.bin myminio/models/time-failure/1/
+              
+              echo "Upload completed."
+          env:
+            - name: MINIO_ROOT_USER
+              valueFrom:
+                secretKeyRef:
+                  name: minio-secret
+                  key: minio_root_user
+            - name: MINIO_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: minio-secret
+                  key: minio_root_password
+            - name: MC_CONFIG_DIR
+              value: /tmp/.mc
+          volumeMounts:
+            - name: mc-config
+              mountPath: /tmp/.mc
+
+      restartPolicy: OnFailure

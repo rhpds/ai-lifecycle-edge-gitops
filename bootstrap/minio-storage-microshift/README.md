@@ -4,18 +4,18 @@
 
 * MinIO: s3 storage used to accommodate data and models. Also to store artifacts generated when using pipelines. Therefore, two buckets are created:
   
-  * `s3-storage`: used to store data and the new trained AI models.
-  * `pipelines`: used to store pipelines artifacts.
+  * `storage`: used to store data from sensors.
+  * `models`: used to store the base and updated AI models.
 
 ## Installation
 
-Create a new Argo application that points to `bootstrap/node-config/groups/dev`.
+Create a new Argo application that points to `bootstrap/minio-storage-microshift/groups/dev`.
 
 ````yaml
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: node-config
+  name: minio-storage-microshift
   namespace: openshift-gitops
 spec:
   destination:
@@ -23,9 +23,9 @@ spec:
     namespace: ''
     server: https://kubernetes.default.svc
   source:
-    path: bootstrap/node-config/groups/dev
+    path: bootstrap/minio-storage-microshift/groups/dev
     repoURL: https://github.com/dialvare/ai-lifecycle-edge.git
-    targetRevision: HEAD
+    targetRevision: test
   sources: []
   project: default
   syncPolicy:
@@ -37,6 +37,7 @@ spec:
 Install the argo app:
 
 ````shellscript
-oc apply -f node-config.yaml -n openshift-gitops
+oc apply -f minio-storage-microshift.yaml -n openshift-gitops
 ````
+
 
