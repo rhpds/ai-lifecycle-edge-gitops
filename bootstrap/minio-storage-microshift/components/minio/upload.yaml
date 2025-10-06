@@ -23,7 +23,7 @@ spec:
               done
 
               echo "Verifying existing buckets..."
-              until mc ls myminio/storage && mc ls myminio/models; do
+              until mc ls myminio/s3-storage && mc ls myminio/models; do
                 echo "Buckets not available yet. Waiting..."
                 sleep 5
               done
