@@ -9,12 +9,12 @@ metadata:
     app.kubernetes.io/name: influx-exporter
 spec:
   ports:
-    - name: https
+    - name: http
       protocol: TCP
       port: 8443
       targetPort: 8443
       nodePort: 31443
-    - name: http
+    - name: https
       protocol: TCP
       port: 8080
       targetPort: 8080
