@@ -10,12 +10,14 @@ spec:
       protocol: TCP
       port: 9000
       targetPort: 9000
+      nodePort: 30000 
     - name: ui
       protocol: TCP
       port: 9090
       targetPort: 9090
+      nodePort: 30090 
   internalTrafficPolicy: Cluster
-  type: ClusterIP
+  type: NodePort
   ipFamilyPolicy: SingleStack
   sessionAffinity: None
   selector:
