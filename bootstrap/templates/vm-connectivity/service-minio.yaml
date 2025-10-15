@@ -1,0 +1,17 @@
+{{- if .Values.vmConnectivity.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: minio-microshift-vm
+  namespace: microshift-001
+spec:
+  type: NodePort
+  selector:
+    kubevirt.io/domain: microshift
+  ports:
+  - port: 30090
+    targetPort: 30090
+    nodePort: 30090
+    protocol: TCP
+{{- end }}
+

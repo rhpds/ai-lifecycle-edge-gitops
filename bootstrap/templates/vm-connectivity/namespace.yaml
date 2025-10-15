@@ -7,4 +7,3 @@ metadata:
     openshift.io/description: "MicroShift Virtual Machine"
     openshift.io/display-name: "MicroShift Virtual Machine"
 {{- end }}
-
