@@ -59,10 +59,10 @@ spec:
               chmod +x /tmp/mc
 
               echo "Downloading models from GitHub..."
-              wget https://raw.githubusercontent.com/dialvare/ai-lifecycle-edge/test/models/stress-detection/stress-detection.xml -O /tmp/stress-detection.xml
-              wget https://raw.githubusercontent.com/dialvare/ai-lifecycle-edge/test/models/stress-detection/stress-detection.bin -O /tmp/stress-detection.bin
-              wget https://raw.githubusercontent.com/dialvare/ai-lifecycle-edge/test/models/time-failure/time-failure.xml -O /tmp/time-failure.xml
-              wget https://raw.githubusercontent.com/dialvare/ai-lifecycle-edge/test/models/time-failure/time-failure.bin -O /tmp/time-failure.bin
+              wget https://raw.githubusercontent.com/dialvare/ai-lifecycle-edge/main/models/stress-detection/stress-detection.xml -O /tmp/stress-detection.xml
+              wget https://raw.githubusercontent.com/dialvare/ai-lifecycle-edge/main/models/stress-detection/stress-detection.bin -O /tmp/stress-detection.bin
+              wget https://raw.githubusercontent.com/dialvare/ai-lifecycle-edge/main/models/time-failure/time-failure.xml -O /tmp/time-failure.xml
+              wget https://raw.githubusercontent.com/dialvare/ai-lifecycle-edge/main/models/time-failure/time-failure.bin -O /tmp/time-failure.bin
 
               echo "Configuring MinIO access..."
               /tmp/mc alias set myminio http://minio-service.minio.svc.cluster.local:9000 $MINIO_ROOT_USER $MINIO_ROOT_PASSWORD
