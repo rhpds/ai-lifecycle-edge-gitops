@@ -1,0 +1,10 @@
+{{- if .Values.vmConnectivity.enabled }}
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: microshift-001
+  annotations:
+    openshift.io/description: "MicroShift Virtual Machine"
+    openshift.io/display-name: "MicroShift Virtual Machine"
+{{- end }}
+
