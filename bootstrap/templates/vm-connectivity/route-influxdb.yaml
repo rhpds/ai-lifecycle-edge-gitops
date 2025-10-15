@@ -1,0 +1,16 @@
+{{- if .Values.vmConnectivity.enabled }}
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: influx-db
+  namespace: microshift-001
+spec:
+  to:
+    kind: Service
+    name: influxdb-vm
+  port:
+    targetPort: 30086
+  tls:
+    termination: edge
+{{- end }}
+
