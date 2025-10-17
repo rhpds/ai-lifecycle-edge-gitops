@@ -24,7 +24,7 @@ spec:
     spec:
       containers:
         - name: data-ingester-jvm
-          image: 'quay.io/oschneid/data-ingester-jvm:1.0'
+          image: 'quay.io/oschneid/data-ingester-jvm:agv-1.0'
           ports:
             - containerPort: 8080
               protocol: TCP
@@ -36,9 +36,9 @@ spec:
             - name: influxdb.token
               value: admin_token
             - name: mp.messaging.incoming.metrics.host
-              value: mqtt-broker-all-0-svc.namespace.svc.cluster.local
+              value: mosquitto
             - name: mp.messaging.incoming.metrics.port
-              value: '61616'
+              value: '1883'
             - name: mp.messaging.incoming.metrics.topic
               value: /ev/bms/#
           resources: {}

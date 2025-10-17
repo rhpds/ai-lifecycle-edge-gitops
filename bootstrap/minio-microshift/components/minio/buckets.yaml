@@ -1,0 +1,44 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: create-minio-buckets
+  namespace: minio
+spec:
+  template:
+    spec:
+      containers:
+      - name: mc
+        image: minio/mc
+        command: ["/bin/sh", "-c"]
+        args:
+          - |
+            echo "Waiting for MinIO to become available..."
+            until mc alias set myminio http://minio-service.minio.svc.cluster.local:9000 $MINIO_ROOT_USER $MINIO_ROOT_PASSWORD; do
+              echo "Retrying in 5s..."
+              sleep 5
+            done
+            mc mb myminio/s3-storage
+            mc mb myminio/models
+            echo -n | mc pipe myminio/s3-storage/.keep
+            echo -n | mc pipe myminio/models/.keep
+
+        env:
+        - name: MINIO_ROOT_USER
+          valueFrom:
+            secretKeyRef:
+              name: minio-secret
+              key: minio_root_user
+        - name: MINIO_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: minio-secret
+              key: minio_root_password
+        - name: MC_CONFIG_DIR
+          value: "/tmp/.mc"
+        volumeMounts:
+        - name: mc-config
+          mountPath: /tmp/.mc
+      restartPolicy: OnFailure
+      volumes:
+      - name: mc-config
+        emptyDir: {}

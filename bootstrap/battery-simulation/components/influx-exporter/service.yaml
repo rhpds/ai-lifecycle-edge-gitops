@@ -9,15 +9,17 @@ metadata:
     app.kubernetes.io/name: influx-exporter
 spec:
   ports:
-    - name: 8443-tcp
+    - name: http
       protocol: TCP
       port: 8443
       targetPort: 8443
-    - name: 8080-tcp
+      nodePort: 31443
+    - name: https
       protocol: TCP
       port: 8080
       targetPort: 8080
-  type: ClusterIP
+      nodePort: 31080
+  type: NodePort
   selector:
     app: influx-exporter
     deployment: influx-exporter
