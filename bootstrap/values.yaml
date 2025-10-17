@@ -11,7 +11,10 @@ git:
   revision: main
 
 # Set to empty to NOT install the Minio SNO
-# minio-storage-sno: ''
 minioStorageSno:
+  enabled: true
+
+# Set to false to NOT install the VM Connectivity resources
+vmConnectivity:
   enabled: true
 
