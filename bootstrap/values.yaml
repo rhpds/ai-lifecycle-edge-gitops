@@ -7,14 +7,13 @@ deployer:
   apiUrl: https://api.cluster.opentlc.com:6443
 
 git:
-  url: https://github.com/dialvare/ai-lifecycle-edge
+  url: https://github.com/rhpds/ai-lifecycle-edge-gitops
   revision: main
 
-# Set to empty to NOT install the Minio SNO
+# Set to false to NOT install the Minio SNO
 minioStorageSno:
   enabled: true
 
 # Set to false to NOT install the VM Connectivity resources
 vmConnectivity:
   enabled: true
-

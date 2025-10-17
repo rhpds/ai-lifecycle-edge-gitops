@@ -9,13 +9,13 @@
 
 ## Installation
 
-Create a new Argo application that points to `bootstrap/minio-storage-microshift/groups/dev`.
+Create a new Argo application that points to `bootstrap/minio-microshift/groups/dev`.
 
 ````yaml
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: minio-storage-microshift
+  name: minio-microshift
   namespace: openshift-gitops
 spec:
   destination:
@@ -23,8 +23,8 @@ spec:
     namespace: ''
     server: https://kubernetes.default.svc
   source:
-    path: bootstrap/minio-storage-microshift/groups/dev
-    repoURL: https://github.com/dialvare/ai-lifecycle-edge.git
+    path: bootstrap/minio-microshift/groups/dev
+    repoURL: https://github.com/rhdps/ai-lifecycle-edge-gitops.git
     targetRevision: main
   sources: []
   project: default
@@ -37,7 +37,7 @@ spec:
 Install the argo app:
 
 ````shellscript
-oc apply -f minio-storage-microshift.yaml -n openshift-gitops
+oc apply -f minio-microshift.yaml -n openshift-gitops
 ````
 
 

@@ -1,8 +1,11 @@
+{{- if .Values.minioStorageSno.enabled }}
 apiVersion: batch/v1
 kind: Job
 metadata:
   name: upload-models
   namespace: minio
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
 spec:
   template:
     spec:
@@ -23,8 +26,14 @@ spec:
               done
 
               echo "Verifying existing buckets..."
-              until mc ls myminio/s3-storage && mc ls myminio/models; do
+              until mc ls myminio/s3-storage && mc ls myminio/pipelines; do
                 echo "Buckets not available yet. Waiting..."
+                sleep 5
+              done
+
+              echo "Verifying folders within s3-storage bucket..."
+              until mc ls myminio/s3-storage/data/ && mc ls myminio/s3-storage/models/; do
+                echo "Folders not available yet. Waiting..."
                 sleep 5
               done
 
@@ -59,19 +68,19 @@ spec:
               chmod +x /tmp/mc
 
               echo "Downloading models from GitHub..."
-              wget https://raw.githubusercontent.com/dialvare/ai-lifecycle-edge/main/models/stress-detection/stress-detection.xml -O /tmp/stress-detection.xml
-              wget https://raw.githubusercontent.com/dialvare/ai-lifecycle-edge/main/models/stress-detection/stress-detection.bin -O /tmp/stress-detection.bin
-              wget https://raw.githubusercontent.com/dialvare/ai-lifecycle-edge/main/models/time-failure/time-failure.xml -O /tmp/time-failure.xml
-              wget https://raw.githubusercontent.com/dialvare/ai-lifecycle-edge/main/models/time-failure/time-failure.bin -O /tmp/time-failure.bin
+              wget https://raw.githubusercontent.com/rhdps/ai-lifecycle-edge-gitops/main/models/stress-detection/stress-detection.xml -O /tmp/stress-detection.xml
+              wget https://raw.githubusercontent.com/rhdps/ai-lifecycle-edge-gitops/main/models/stress-detection/stress-detection.bin -O /tmp/stress-detection.bin
+              wget https://raw.githubusercontent.com/rhdps/ai-lifecycle-edge-gitops/main/models/time-failure/time-failure.xml -O /tmp/time-failure.xml
+              wget https://raw.githubusercontent.com/rhdps/ai-lifecycle-edge-gitops/main/models/time-failure/time-failure.bin -O /tmp/time-failure.bin
 
               echo "Configuring MinIO access..."
               /tmp/mc alias set myminio http://minio-service.minio.svc.cluster.local:9000 $MINIO_ROOT_USER $MINIO_ROOT_PASSWORD
 
               echo "Uploading models to MinIO..."
-              /tmp/mc cp /tmp/stress-detection.xml myminio/models/stress-detection/1/
-              /tmp/mc cp /tmp/stress-detection.bin myminio/models/stress-detection/1/
-              /tmp/mc cp /tmp/time-failure.xml myminio/models/time-failure/1/
-              /tmp/mc cp /tmp/time-failure.bin myminio/models/time-failure/1/
+              /tmp/mc cp /tmp/stress-detection.xml myminio/s3-storage/models/stress-detection/1/
+              /tmp/mc cp /tmp/stress-detection.bin myminio/s3-storage/models/stress-detection/1/
+              /tmp/mc cp /tmp/time-failure.xml myminio/s3-storage/models/time-failure/1/
+              /tmp/mc cp /tmp/time-failure.bin myminio/s3-storage/models/time-failure/1/
               
               echo "Upload completed."
           env:
@@ -92,3 +101,4 @@ spec:
               mountPath: /tmp/.mc
 
       restartPolicy: OnFailure
+{{- end }}

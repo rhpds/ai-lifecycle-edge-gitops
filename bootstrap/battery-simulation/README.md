@@ -28,7 +28,7 @@ spec:
     server: https://kubernetes.default.svc
   source:
     path: bootstrap/battery-simulation/groups/dev
-    repoURL: https://github.com/dialvare/ai-lifecycle-edge.git
+    repoURL: https://github.com/rhdps/ai-lifecycle-edge-gitops.git
     targetRevision: main
   sources: []
   project: default
