@@ -12,3 +12,18 @@ spec:
 #  tls:
 #     termination: edge
 #     insecureEdgeTerminationPolicy: Redirect
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: time-failure-predictor
+  namespace: inference
+spec:
+  to:
+    kind: Service
+    name: time-failure-predictor
+  port:
+    targetPort: 80
+#  tls:
+#     termination: edge
+#     insecureEdgeTerminationPolicy: Redirect
