@@ -193,7 +193,8 @@ deploymentSpec:
           \ test data\n            df = pd.read_csv(prepared_data.path)\n\n      \
           \      # Prepare features\n            features = [\"stateOfCharge\", \"\
           stateOfHealth\", \"batteryCurrent\", \"batteryVoltage\", \n            \
-          \           \"kmh\", \"distance\", \"batteryTemp\", \"ambientTemp\"]\n\n\
+          \           \"kmh\", \"distance\", \"batteryTemp\", \"ambientTemp\", \"currentLoad\"\
+          ]\n\n\
           \            # Make predictions for all data\n            X = df[features].values.astype(np.float32)\n\
           \            predictions = model.predict(X, verbose=0)\n\n            df['stress_prediction']\
           \ = predictions.flatten()\n            df['high_stress'] = (df['stress_prediction']\
@@ -398,16 +399,16 @@ deploymentSpec:
           \ import ClientError\n\n    try:\n        # Create s3 connection\n     \
           \   s3_client = boto3.client(\n            's3',\n            aws_access_key_id=aws_access_key_id,\n\
           \            aws_secret_access_key=aws_secret_access_key,\n            endpoint_url=aws_s3_endpoint\n\
-          \        )\n\n        # Upload stress model to models/stress-detection/1/\n\
+          \        )\n\n        # Upload stress model to models/serving/battery_stress_model/\n\
           \        stress_model_files = []\n        for root, dirs, files in os.walk(stress_model.path):\n\
           \            for file in files:\n                file_path = os.path.join(root,\
-          \ file)\n                s3_key = f\"models/stress-detection/1/{os.path.relpath(file_path,\
+          \ file)\n                s3_key = f\"models/serving/battery_stress_model/{os.path.relpath(file_path,\
           \ stress_model.path)}\"\n                s3_client.upload_file(file_path,\
           \ aws_s3_bucket, s3_key)\n                stress_model_files.append(s3_key)\n\
-          \n        # Upload TTF model to models/time-to-failure/1/\n        ttf_model_files\
+          \n        # Upload TTF model to models/serving/battery_ttf_model/\n        ttf_model_files\
           \ = []\n        for root, dirs, files in os.walk(ttf_model.path):\n    \
           \        for file in files:\n                file_path = os.path.join(root,\
-          \ file)\n                s3_key = f\"models/time-to-failure/1/{os.path.relpath(file_path,\
+          \ file)\n                s3_key = f\"models/serving/battery_ttf_model/{os.path.relpath(file_path,\
           \ ttf_model.path)}\"\n                s3_client.upload_file(file_path, aws_s3_bucket,\
           \ s3_key)\n                ttf_model_files.append(s3_key)\n\n        status\
           \ = f\"Successfully uploaded {len(stress_model_files)} stress model files\
@@ -462,7 +463,7 @@ deploymentSpec:
           \ axis=1)\n    stress_events = df[\"stressIndicator\"].sum()\n\n    # Define\
           \ Features and Target\n    features = [\"stateOfCharge\", \"stateOfHealth\"\
           , \"batteryCurrent\", \"batteryVoltage\", \n                \"kmh\", \"\
-          distance\", \"batteryTemp\", \"ambientTemp\"]\n    X = df[features]\n  \
+          distance\", \"batteryTemp\", \"ambientTemp\", \"currentLoad\"]\n    X = df[features]\n  \
           \  y = df[\"stressIndicator\"]\n\n    # Split Data\n    X_train, X_test,\
           \ y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)\n\
           \n    # Normalize data\n    scaler = StandardScaler()\n    X_train_scaled\

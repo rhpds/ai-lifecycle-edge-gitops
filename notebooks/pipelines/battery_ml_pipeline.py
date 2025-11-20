@@ -156,7 +156,7 @@ def train_stress_detection_model(
     
     # Define Features and Target
     features = ["stateOfCharge", "stateOfHealth", "batteryCurrent", "batteryVoltage", 
-                "kmh", "distance", "batteryTemp", "ambientTemp"]
+                "kmh", "distance", "batteryTemp", "ambientTemp", "currentLoad"]
     X = df[features]
     y = df["stressIndicator"]
     
@@ -243,7 +243,7 @@ def predict_stress(
             
             # Prepare features
             features = ["stateOfCharge", "stateOfHealth", "batteryCurrent", "batteryVoltage", 
-                       "kmh", "distance", "batteryTemp", "ambientTemp"]
+                       "kmh", "distance", "batteryTemp", "ambientTemp", "currentLoad"]
             
             # Make predictions for all data
             X = df[features].values.astype(np.float32)
@@ -460,21 +460,21 @@ def save_models_to_s3(
             endpoint_url=aws_s3_endpoint
         )
         
-        # Upload stress model to models/stress-detection/1/
+        # Upload stress model to models/serving/battery_stress_model/
         stress_model_files = []
         for root, dirs, files in os.walk(stress_model.path):
             for file in files:
                 file_path = os.path.join(root, file)
-                s3_key = f"models/stress-detection/1/{os.path.relpath(file_path, stress_model.path)}"
+                s3_key = f"models/serving/battery_stress_model/{os.path.relpath(file_path, stress_model.path)}"
                 s3_client.upload_file(file_path, aws_s3_bucket, s3_key)
                 stress_model_files.append(s3_key)
         
-        # Upload TTF model to models/time-to-failure/1/
+        # Upload TTF model to models/serving/battery_ttf_model/
         ttf_model_files = []
         for root, dirs, files in os.walk(ttf_model.path):
             for file in files:
                 file_path = os.path.join(root, file)
-                s3_key = f"models/time-to-failure/1/{os.path.relpath(file_path, ttf_model.path)}"
+                s3_key = f"models/serving/battery_ttf_model/{os.path.relpath(file_path, ttf_model.path)}"
                 s3_client.upload_file(file_path, aws_s3_bucket, s3_key)
                 ttf_model_files.append(s3_key)
         
