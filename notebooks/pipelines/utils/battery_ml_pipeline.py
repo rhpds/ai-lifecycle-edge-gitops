@@ -190,7 +190,11 @@ def train_stress_detection_model(
     model_dir = stress_model.path
     os.makedirs(model_dir, exist_ok=True)
     
-    # Save as SavedModel format first
+    # Save in Keras native format for validation
+    keras_model_path = os.path.join(model_dir, "model.keras")
+    mlp_tf.save(keras_model_path)
+    
+    # Save as SavedModel format for OpenVINO conversion
     saved_model_path = os.path.join(model_dir, "saved_model")
     tf.saved_model.save(mlp_tf, saved_model_path)
     
@@ -212,72 +216,6 @@ def train_stress_detection_model(
     from collections import namedtuple
     output = namedtuple('Outputs', ['accuracy', 'stress_events'])
     return output(float(test_accuracy), int(stress_events))
-
-
-@component(
-    base_image="registry.access.redhat.com/ubi9/python-311:latest",
-    packages_to_install=["pandas", "tensorflow", "numpy"]
-)
-def predict_stress(
-    stress_model: Input[Model],
-    prepared_data: Input[Dataset],
-    stress_predictions: Output[Dataset]
-) -> NamedTuple('Outputs', [('high_stress_count', int)]):
-    """
-    Component 04: Predict stress using TensorFlow
-    """
-    import pandas as pd
-    import numpy as np
-    import tensorflow as tf
-    import os
-    
-    try:
-        # Load Model
-        model_path = os.path.join(stress_model.path, "saved_model")
-        
-        if os.path.exists(model_path):
-            model = tf.keras.models.load_model(model_path)
-            
-            # Load test data
-            df = pd.read_csv(prepared_data.path)
-            
-            # Prepare features
-            features = ["stateOfCharge", "stateOfHealth", "batteryCurrent", "batteryVoltage", 
-                       "kmh", "distance", "batteryTemp", "ambientTemp", "currentLoad"]
-            
-            # Make predictions for all data
-            X = df[features].values.astype(np.float32)
-            predictions = model.predict(X, verbose=0)
-            
-            df['stress_prediction'] = predictions.flatten()
-            df['high_stress'] = (df['stress_prediction'] > 0.5).astype(int)
-            
-            # Save predictions
-            df.to_csv(stress_predictions.path, index=False)
-            
-            high_stress_count = df['high_stress'].sum()
-            print(f"Predicted {high_stress_count} high stress conditions")
-            
-        else:
-            print("TensorFlow model not found, using dummy predictions")
-            df = pd.read_csv(prepared_data.path)
-            df['stress_prediction'] = 0.1  # Low stress
-            df['high_stress'] = 0
-            df.to_csv(stress_predictions.path, index=False)
-            high_stress_count = 0
-            
-    except Exception as e:
-        print(f"Error in stress prediction: {e}")
-        # Fallback
-        df = pd.read_csv(prepared_data.path)
-        df['stress_prediction'] = 0.1
-        df['high_stress'] = 0
-        df.to_csv(stress_predictions.path, index=False)
-        high_stress_count = 0
-    
-    from collections import namedtuple
-    output = namedtuple('Outputs', ['high_stress_count'])
-    return output(int(high_stress_count))
 
 
 @component(
@@ -347,7 +285,11 @@ def train_ttf_model(
     model_dir = ttf_model.path
     os.makedirs(model_dir, exist_ok=True)
     
-    # Save as SavedModel format first
+    # Save in Keras native format for validation
+    keras_model_path = os.path.join(model_dir, "model.keras")
+    ttf_model_tf.save(keras_model_path)
+    
+    # Save as SavedModel format for OpenVINO conversion
     saved_model_path = os.path.join(model_dir, "saved_model")
     tf.saved_model.save(ttf_model_tf, saved_model_path)
     
@@ -372,80 +314,221 @@ def train_ttf_model(
 
 @component(
     base_image="registry.access.redhat.com/ubi9/python-311:latest",
-    packages_to_install=["pandas", "tensorflow", "numpy"]
+    packages_to_install=["boto3", "pandas", "tensorflow", "numpy"]
 )
-def predict_ttf(
-    ttf_model: Input[Model],
+def validate_stress_model(
+    new_model: Input[Model],
     prepared_data: Input[Dataset],
-    ttf_predictions: Output[Dataset]
-) -> NamedTuple('Outputs', [('avg_ttf_hours', float)]):
+    new_model_accuracy: float,
+    aws_access_key_id: str,
+    aws_secret_access_key: str,
+    aws_s3_endpoint: str,
+    aws_s3_bucket: str
+) -> NamedTuple('Outputs', [('should_update', str), ('new_accuracy', float), ('current_accuracy', float)]):
     """
-    Component 06: Predict time-to-failure using TensorFlow
+    Component: Validate stress model against existing model in S3
     """
+    import boto3
+    import os
+    import tempfile
+    import tensorflow as tf
     import pandas as pd
     import numpy as np
-    import tensorflow as tf
-    import os
+    from botocore.exceptions import ClientError
+    
+    should_update = "false"
+    current_accuracy = 0.0
     
     try:
-        # Load Model
-        model_path = os.path.join(ttf_model.path, "saved_model")
+        # Create s3 connection
+        s3_client = boto3.client(
+            's3',
+            aws_access_key_id=aws_access_key_id,
+            aws_secret_access_key=aws_secret_access_key,
+            endpoint_url=aws_s3_endpoint
+        )
         
-        if os.path.exists(model_path):
-            model = tf.keras.models.load_model(model_path)
+        # Try to download existing model from S3
+        temp_dir = tempfile.mkdtemp()
+        keras_model_s3_key = "models/serving/battery_stress_model/model.keras"
+        keras_model_local = os.path.join(temp_dir, "model.keras")
+        
+        try:
+            s3_client.download_file(aws_s3_bucket, keras_model_s3_key, keras_model_local)
+            print(f"Found existing model in S3, downloading for comparison...")
             
-            # Load test data
+            # Load existing model and evaluate
+            existing_model = tf.keras.models.load_model(keras_model_local)
+            
+            # Load test data and evaluate
             df = pd.read_csv(prepared_data.path)
             
-            # Prepare features for TTF
-            features = ["batteryTemp", "batteryCurrent", "batteryVoltage", "stateOfCharge", "stateOfHealth"]
+            # Define stress condition for labels
+            def detect_stress(row):
+                if row["batteryCurrent"] > 400 or row["batteryTemp"] > 50 or row["stateOfCharge"] < 0.05 or row["batteryVoltage"] < 320:
+                    return 1
+                return 0
             
-            # Make predictions for all data
+            df["stressIndicator"] = df.apply(detect_stress, axis=1)
+            
+            features = ["stateOfCharge", "stateOfHealth", "batteryCurrent", "batteryVoltage", 
+                       "kmh", "distance", "batteryTemp", "ambientTemp", "currentLoad"]
             X = df[features].values.astype(np.float32)
-            predictions = model.predict(X, verbose=0)
+            y = df["stressIndicator"].values
             
-            df['ttf_prediction_hours'] = predictions.flatten()
+            # Normalize features (simple normalization matching training)
+            X_mean = X.mean(axis=0)
+            X_std = X.std(axis=0) + 1e-8
+            X_normalized = (X - X_mean) / X_std
             
-            # Save predictions
-            df.to_csv(ttf_predictions.path, index=False)
+            # Evaluate existing model
+            _, current_accuracy = existing_model.evaluate(X_normalized, y, verbose=0)
             
-            avg_ttf = np.mean(predictions)
-            print(f"Average predicted TTF: {avg_ttf:.2f} hours")
+            print(f"Current model accuracy: {current_accuracy:.4f}")
+            print(f"New model accuracy: {new_model_accuracy:.4f}")
             
-        else:
-            print("TensorFlow TTF model not found, using dummy predictions")
-            df = pd.read_csv(prepared_data.path)
-            df['ttf_prediction_hours'] = 100.0  # Default 100 hours
-            df.to_csv(ttf_predictions.path, index=False)
-            avg_ttf = 100.0
-            
+            # Compare models (any improvement is enough)
+            if new_model_accuracy > current_accuracy:
+                should_update = "true"
+                print(f"[APPROVED] New model is better! Improvement: {(new_model_accuracy - current_accuracy)*100:.2f}%")
+            else:
+                print(f"[REJECTED] New model not better. Keeping current model.")
+                
+        except ClientError as e:
+            error_code = e.response.get('Error', {}).get('Code', '')
+            if error_code in ['NoSuchKey', '404', 'NotFound']:
+                print("No existing model found in S3, will upload new model")
+                should_update = "true"
+            else:
+                print(f"S3 error: {e}")
+                print("Defaulting to update new model")
+                should_update = "true"
+                
     except Exception as e:
-        print(f"Error in TTF prediction: {e}")
-        # Fallback
-        df = pd.read_csv(prepared_data.path)
-        df['ttf_prediction_hours'] = 100.0
-        df.to_csv(ttf_predictions.path, index=False)
-        avg_ttf = 100.0
+        print(f"Error during validation: {e}")
+        import traceback
+        traceback.print_exc()
+        print("Defaulting to update new model")
+        should_update = "true"
     
     from collections import namedtuple
-    output = namedtuple('Outputs', ['avg_ttf_hours'])
-    return output(float(avg_ttf))
+    output = namedtuple('Outputs', ['should_update', 'new_accuracy', 'current_accuracy'])
+    return output(should_update, float(new_model_accuracy), float(current_accuracy))
+
+
+@component(
+    base_image="registry.access.redhat.com/ubi9/python-311:latest",
+    packages_to_install=["boto3", "pandas", "tensorflow", "numpy", "scikit-learn"]
+)
+def validate_ttf_model(
+    new_model: Input[Model],
+    prepared_data: Input[Dataset],
+    new_model_mae: float,
+    aws_access_key_id: str,
+    aws_secret_access_key: str,
+    aws_s3_endpoint: str,
+    aws_s3_bucket: str
+) -> NamedTuple('Outputs', [('should_update', str), ('new_mae', float), ('current_mae', float)]):
+    """
+    Component: Validate TTF model against existing model in S3
+    """
+    import boto3
+    import os
+    import tempfile
+    import tensorflow as tf
+    import pandas as pd
+    import numpy as np
+    from sklearn.metrics import mean_absolute_error
+    from botocore.exceptions import ClientError
+    
+    should_update = "false"
+    current_mae = 999.0  # High default value
+    
+    try:
+        # Create s3 connection
+        s3_client = boto3.client(
+            's3',
+            aws_access_key_id=aws_access_key_id,
+            aws_secret_access_key=aws_secret_access_key,
+            endpoint_url=aws_s3_endpoint
+        )
+        
+        # Try to download existing model from S3
+        temp_dir = tempfile.mkdtemp()
+        keras_model_s3_key = "models/serving/battery_ttf_model/model.keras"
+        keras_model_local = os.path.join(temp_dir, "model.keras")
+        
+        try:
+            s3_client.download_file(aws_s3_bucket, keras_model_s3_key, keras_model_local)
+            print(f"Found existing TTF model in S3, downloading for comparison...")
+            
+            # Load existing model and evaluate
+            existing_model = tf.keras.models.load_model(keras_model_local)
+            
+            # Load test data and evaluate
+            df = pd.read_csv(prepared_data.path)
+            df["timestamp"] = pd.to_datetime(df["timestamp"])
+            df["timeBeforeFailure"] = (df["timestamp"].max() - df["timestamp"]).dt.total_seconds() / 3600
+            
+            features = ["batteryTemp", "batteryCurrent", "batteryVoltage", "stateOfCharge", "stateOfHealth"]
+            X = df[features].values.astype(np.float32)
+            y = df["timeBeforeFailure"].values
+            
+            # Normalize features (matching training)
+            X_mean = X.mean(axis=0)
+            X_std = X.std(axis=0) + 1e-8
+            X_normalized = (X - X_mean) / X_std
+            
+            # Predict and calculate MAE
+            y_pred = existing_model.predict(X_normalized, verbose=0).flatten()
+            current_mae = mean_absolute_error(y, y_pred)
+            
+            print(f"Current model MAE: {current_mae:.4f} hours")
+            print(f"New model MAE: {new_model_mae:.4f} hours")
+            
+            # Compare (lower MAE is better, any improvement is enough)
+            if new_model_mae < current_mae:
+                should_update = "true"
+                improvement = ((current_mae - new_model_mae) / current_mae) * 100
+                print(f"[APPROVED] New model is better! Improvement: {improvement:.2f}%")
+            else:
+                print(f"[REJECTED] New model not better. Keeping current model.")
+                
+        except ClientError as e:
+            error_code = e.response.get('Error', {}).get('Code', '')
+            if error_code in ['NoSuchKey', '404', 'NotFound']:
+                print("No existing TTF model found in S3, will upload new model")
+                should_update = "true"
+            else:
+                print(f"S3 error: {e}")
+                print("Defaulting to update new model")
+                should_update = "true"
+                
+    except Exception as e:
+        print(f"Error during TTF validation: {e}")
+        import traceback
+        traceback.print_exc()
+        print("Defaulting to update new model")
+        should_update = "true"
+    
+    from collections import namedtuple
+    output = namedtuple('Outputs', ['should_update', 'new_mae', 'current_mae'])
+    return output(should_update, float(new_model_mae), float(current_mae))
 
 
 @component(
     base_image="registry.access.redhat.com/ubi9/python-311:latest",
     packages_to_install=["boto3"]
 )
-def save_models_to_s3(
+def save_stress_model_to_s3(
     stress_model: Input[Model],
-    ttf_model: Input[Model],
     aws_access_key_id: str,
     aws_secret_access_key: str,
     aws_s3_endpoint: str,
     aws_s3_bucket: str
 ) -> NamedTuple('Outputs', [('upload_status', str)]):
     """
-    Component 07: Save models to S3
+    Component: Save stress detection model to S3
     """
     import boto3
     import os
@@ -469,6 +552,48 @@ def save_models_to_s3(
                 s3_client.upload_file(file_path, aws_s3_bucket, s3_key)
                 stress_model_files.append(s3_key)
         
+        status = f"Successfully uploaded {len(stress_model_files)} stress model files to S3"
+        print(status)
+        
+    except ClientError as e:
+        status = f"Error uploading stress model to S3: {e}"
+        print(status)
+    except Exception as e:
+        status = f"Unexpected error: {e}"
+        print(status)
+    
+    from collections import namedtuple
+    output = namedtuple('Outputs', ['upload_status'])
+    return output(status)
+
+
+@component(
+    base_image="registry.access.redhat.com/ubi9/python-311:latest",
+    packages_to_install=["boto3"]
+)
+def save_ttf_model_to_s3(
+    ttf_model: Input[Model],
+    aws_access_key_id: str,
+    aws_secret_access_key: str,
+    aws_s3_endpoint: str,
+    aws_s3_bucket: str
+) -> NamedTuple('Outputs', [('upload_status', str)]):
+    """
+    Component: Save TTF model to S3
+    """
+    import boto3
+    import os
+    from botocore.exceptions import ClientError
+    
+    try:
+        # Create s3 connection
+        s3_client = boto3.client(
+            's3',
+            aws_access_key_id=aws_access_key_id,
+            aws_secret_access_key=aws_secret_access_key,
+            endpoint_url=aws_s3_endpoint
+        )
+        
         # Upload TTF model to models/serving/battery_ttf_model/
         ttf_model_files = []
         for root, dirs, files in os.walk(ttf_model.path):
@@ -478,11 +603,11 @@ def save_models_to_s3(
                 s3_client.upload_file(file_path, aws_s3_bucket, s3_key)
                 ttf_model_files.append(s3_key)
         
-        status = f"Successfully uploaded {len(stress_model_files)} stress model files and {len(ttf_model_files)} TTF model files to S3"
+        status = f"Successfully uploaded {len(ttf_model_files)} TTF model files to S3"
         print(status)
         
     except ClientError as e:
-        status = f"Error uploading to S3: {e}"
+        status = f"Error uploading TTF model to S3: {e}"
         print(status)
     except Exception as e:
         status = f"Unexpected error: {e}"
@@ -537,27 +662,53 @@ def battery_ml_pipeline(
         prepared_data=prepare_task.outputs['prepared_data']
     )
     
-    # Step 4: Predict stress
-    stress_predict_task = predict_stress(
-        stress_model=stress_train_task.outputs['stress_model'],
-        prepared_data=prepare_task.outputs['prepared_data']
-    )
-    
-    # Step 5: Train TTF model
+    # Step 4: Train TTF model
     ttf_train_task = train_ttf_model(
         prepared_data=prepare_task.outputs['prepared_data']
     )
     
-    # Step 6: Predict TTF
-    ttf_predict_task = predict_ttf(
-        ttf_model=ttf_train_task.outputs['ttf_model'],
-        prepared_data=prepare_task.outputs['prepared_data']
+    # Step 7: Validate stress model
+    stress_validation_task = validate_stress_model(
+        new_model=stress_train_task.outputs['stress_model'],
+        prepared_data=prepare_task.outputs['prepared_data'],
+        new_model_accuracy=stress_train_task.outputs['accuracy'],
+        aws_access_key_id=aws_access_key_id,
+        aws_secret_access_key=aws_secret_access_key,
+        aws_s3_endpoint=aws_s3_endpoint,
+        aws_s3_bucket=aws_s3_bucket
     )
     
-    # Step 7: Save models to S3
-    save_task = save_models_to_s3(
-        stress_model=stress_train_task.outputs['stress_model'],
-        ttf_model=ttf_train_task.outputs['ttf_model'],
+    # Step 8: Validate TTF model
+    ttf_validation_task = validate_ttf_model(
+        new_model=ttf_train_task.outputs['ttf_model'],
+        prepared_data=prepare_task.outputs['prepared_data'],
+        new_model_mae=ttf_train_task.outputs['mae'],
+        aws_access_key_id=aws_access_key_id,
+        aws_secret_access_key=aws_secret_access_key,
+        aws_s3_endpoint=aws_s3_endpoint,
+        aws_s3_bucket=aws_s3_bucket
+    )
+    
+    # Step 9: Save stress model to S3 if validation passes
+    with dsl.Condition(
+        stress_validation_task.outputs['should_update'] == "true",
+        name="stress-model-approved"
+    ):
+        save_stress_task = save_stress_model_to_s3(
+            stress_model=stress_train_task.outputs['stress_model'],
+            aws_access_key_id=aws_access_key_id,
+            aws_secret_access_key=aws_secret_access_key,
+            aws_s3_endpoint=aws_s3_endpoint,
+            aws_s3_bucket=aws_s3_bucket
+        )
+    
+    # Step 10: Save TTF model to S3 if validation passes
+    with dsl.Condition(
+        ttf_validation_task.outputs['should_update'] == "true",
+        name="ttf-model-approved"
+    ):
+        save_ttf_task = save_ttf_model_to_s3(
+            ttf_model=ttf_train_task.outputs['ttf_model'],
         aws_access_key_id=aws_access_key_id,
         aws_secret_access_key=aws_secret_access_key,
         aws_s3_endpoint=aws_s3_endpoint,
@@ -568,9 +719,8 @@ def battery_ml_pipeline(
     prepare_task.after(retrieve_task)
     stress_train_task.after(prepare_task)
     ttf_train_task.after(prepare_task)
-    stress_predict_task.after(stress_train_task)
-    ttf_predict_task.after(ttf_train_task)
-    save_task.after(stress_train_task, ttf_train_task)
+    stress_validation_task.after(stress_train_task)
+    ttf_validation_task.after(ttf_train_task)
 
 
 # =============================================================================
