@@ -361,15 +361,14 @@ deploymentSpec:
           \        print(f\"Error connecting to InfluxDB: {e}\")\n        # Fallback:\
           \ use sample data\n        print(\"Using fallback sample data...\")\n  \
           \      sample_data = {\n            '_time': ['2025-02-12 14:26:34.190000+00:00']\
-          \ * 10,\n            'batteryId': [1] * 10,\n            '_field': ['ambientTemp',\
+          \ * 8,\n            'batteryId': [1] * 8,\n            '_field': ['ambientTemp',\
           \ 'batteryCurrent', 'batteryTemp', 'batteryVoltage', \n                \
-          \      'distance', 'kmh', 'stateOfCharge', 'stateOfHealth'] * 1 + ['ambientTemp',\
-          \ 'batteryCurrent'],\n            '_value': [18.65, 78.06, 25.22, 396.39,\
-          \ 0.2, 127.75, 0.9991, 99.9998, 18.36, 81.42]\n        }\n        df = pd.DataFrame(sample_data)\n\
-          \        df.to_csv(raw_data.path, index=False)\n        records_count =\
-          \ len(df)\n\n    client.close()\n\n    from collections import namedtuple\n\
-          \    output = namedtuple('Outputs', ['records_count'])\n    return output(records_count)\n\
-          \n"
+          \      'distance', 'kmh', 'stateOfCharge', 'stateOfHealth'],\n         \
+          \   '_value': [18.65, 78.06, 25.22, 396.39, 0.2, 127.75, 0.9991, 99.9998]\n\
+          \        }\n        df = pd.DataFrame(sample_data)\n        df.to_csv(raw_data.path,\
+          \ index=False)\n        records_count = len(df)\n\n    client.close()\n\n\
+          \    from collections import namedtuple\n    output = namedtuple('Outputs',\
+          \ ['records_count'])\n    return output(records_count)\n\n"
         image: registry.access.redhat.com/ubi9/python-311:latest
     exec-save-stress-model-to-s3:
       container:
@@ -406,10 +405,10 @@ deploymentSpec:
           \ import ClientError\n\n    try:\n        # Create s3 connection\n     \
           \   s3_client = boto3.client(\n            's3',\n            aws_access_key_id=aws_access_key_id,\n\
           \            aws_secret_access_key=aws_secret_access_key,\n            endpoint_url=aws_s3_endpoint\n\
-          \        )\n\n        # Upload stress model to models/serving/battery_stress_model/\n\
+          \        )\n\n        # Upload stress model to models/serving/stress-detection/\n\
           \        stress_model_files = []\n        for root, dirs, files in os.walk(stress_model.path):\n\
           \            for file in files:\n                file_path = os.path.join(root,\
-          \ file)\n                s3_key = f\"models/serving/battery_stress_model/{os.path.relpath(file_path,\
+          \ file)\n                s3_key = f\"models/serving/stress-detection/{os.path.relpath(file_path,\
           \ stress_model.path)}\"\n                s3_client.upload_file(file_path,\
           \ aws_s3_bucket, s3_key)\n                stress_model_files.append(s3_key)\n\
           \n        status = f\"Successfully uploaded {len(stress_model_files)} stress\
@@ -455,10 +454,10 @@ deploymentSpec:
           \n    try:\n        # Create s3 connection\n        s3_client = boto3.client(\n\
           \            's3',\n            aws_access_key_id=aws_access_key_id,\n \
           \           aws_secret_access_key=aws_secret_access_key,\n            endpoint_url=aws_s3_endpoint\n\
-          \        )\n\n        # Upload TTF model to models/serving/battery_ttf_model/\n\
+          \        )\n\n        # Upload TTF model to models/serving/time-to-failure/\n\
           \        ttf_model_files = []\n        for root, dirs, files in os.walk(ttf_model.path):\n\
           \            for file in files:\n                file_path = os.path.join(root,\
-          \ file)\n                s3_key = f\"models/serving/battery_ttf_model/{os.path.relpath(file_path,\
+          \ file)\n                s3_key = f\"models/serving/time-to-failure/{os.path.relpath(file_path,\
           \ ttf_model.path)}\"\n                s3_client.upload_file(file_path, aws_s3_bucket,\
           \ s3_key)\n                ttf_model_files.append(s3_key)\n\n        status\
           \ = f\"Successfully uploaded {len(ttf_model_files)} TTF model files to S3\"\
@@ -656,7 +655,7 @@ deploymentSpec:
           \        s3_client = boto3.client(\n            's3',\n            aws_access_key_id=aws_access_key_id,\n\
           \            aws_secret_access_key=aws_secret_access_key,\n            endpoint_url=aws_s3_endpoint\n\
           \        )\n\n        # Try to download existing model from S3\n       \
-          \ temp_dir = tempfile.mkdtemp()\n        keras_model_s3_key = \"models/serving/battery_stress_model/model.keras\"\
+          \ temp_dir = tempfile.mkdtemp()\n        keras_model_s3_key = \"models/serving/stress-detection/model.keras\"\
           \n        keras_model_local = os.path.join(temp_dir, \"model.keras\")\n\n\
           \        try:\n            s3_client.download_file(aws_s3_bucket, keras_model_s3_key,\
           \ keras_model_local)\n            print(f\"Found existing model in S3, downloading\
@@ -738,7 +737,7 @@ deploymentSpec:
           \         's3',\n            aws_access_key_id=aws_access_key_id,\n    \
           \        aws_secret_access_key=aws_secret_access_key,\n            endpoint_url=aws_s3_endpoint\n\
           \        )\n\n        # Try to download existing model from S3\n       \
-          \ temp_dir = tempfile.mkdtemp()\n        keras_model_s3_key = \"models/serving/battery_ttf_model/model.keras\"\
+          \ temp_dir = tempfile.mkdtemp()\n        keras_model_s3_key = \"models/serving/time-to-failure/model.keras\"\
           \n        keras_model_local = os.path.join(temp_dir, \"model.keras\")\n\n\
           \        try:\n            s3_client.download_file(aws_s3_bucket, keras_model_s3_key,\
           \ keras_model_local)\n            print(f\"Found existing TTF model in S3,\

@@ -70,11 +70,11 @@ def retrieve_influx_data(
         # Fallback: use sample data
         print("Using fallback sample data...")
         sample_data = {
-            '_time': ['2025-02-12 14:26:34.190000+00:00'] * 10,
-            'batteryId': [1] * 10,
+            '_time': ['2025-02-12 14:26:34.190000+00:00'] * 8,
+            'batteryId': [1] * 8,
             '_field': ['ambientTemp', 'batteryCurrent', 'batteryTemp', 'batteryVoltage', 
-                      'distance', 'kmh', 'stateOfCharge', 'stateOfHealth'] * 1 + ['ambientTemp', 'batteryCurrent'],
-            '_value': [18.65, 78.06, 25.22, 396.39, 0.2, 127.75, 0.9991, 99.9998, 18.36, 81.42]
+                      'distance', 'kmh', 'stateOfCharge', 'stateOfHealth'],
+            '_value': [18.65, 78.06, 25.22, 396.39, 0.2, 127.75, 0.9991, 99.9998]
         }
         df = pd.DataFrame(sample_data)
         df.to_csv(raw_data.path, index=False)
@@ -350,7 +350,7 @@ def validate_stress_model(
         
         # Try to download existing model from S3
         temp_dir = tempfile.mkdtemp()
-        keras_model_s3_key = "models/serving/battery_stress_model/model.keras"
+        keras_model_s3_key = "models/serving/stress-detection/model.keras"
         keras_model_local = os.path.join(temp_dir, "model.keras")
         
         try:
@@ -455,7 +455,7 @@ def validate_ttf_model(
         
         # Try to download existing model from S3
         temp_dir = tempfile.mkdtemp()
-        keras_model_s3_key = "models/serving/battery_ttf_model/model.keras"
+        keras_model_s3_key = "models/serving/time-to-failure/model.keras"
         keras_model_local = os.path.join(temp_dir, "model.keras")
         
         try:
@@ -543,12 +543,12 @@ def save_stress_model_to_s3(
             endpoint_url=aws_s3_endpoint
         )
         
-        # Upload stress model to models/serving/battery_stress_model/
+        # Upload stress model to models/serving/stress-detection/
         stress_model_files = []
         for root, dirs, files in os.walk(stress_model.path):
             for file in files:
                 file_path = os.path.join(root, file)
-                s3_key = f"models/serving/battery_stress_model/{os.path.relpath(file_path, stress_model.path)}"
+                s3_key = f"models/serving/stress-detection/{os.path.relpath(file_path, stress_model.path)}"
                 s3_client.upload_file(file_path, aws_s3_bucket, s3_key)
                 stress_model_files.append(s3_key)
         
@@ -594,12 +594,12 @@ def save_ttf_model_to_s3(
             endpoint_url=aws_s3_endpoint
         )
         
-        # Upload TTF model to models/serving/battery_ttf_model/
+        # Upload TTF model to models/serving/time-to-failure/
         ttf_model_files = []
         for root, dirs, files in os.walk(ttf_model.path):
             for file in files:
                 file_path = os.path.join(root, file)
-                s3_key = f"models/serving/battery_ttf_model/{os.path.relpath(file_path, ttf_model.path)}"
+                s3_key = f"models/serving/time-to-failure/{os.path.relpath(file_path, ttf_model.path)}"
                 s3_client.upload_file(file_path, aws_s3_bucket, s3_key)
                 ttf_model_files.append(s3_key)
         
