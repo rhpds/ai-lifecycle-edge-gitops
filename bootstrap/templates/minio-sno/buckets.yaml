@@ -22,7 +22,7 @@ spec:
             done
             mc mb myminio/s3-storage
             mc mb myminio/pipelines
-            echo -n | mc pipe myminio/s3-storage/data/.keep
+            echo -n | mc pipe myminio/s3-storage/database/.keep
             echo -n | mc pipe myminio/s3-storage/models/.keep
 
         env:

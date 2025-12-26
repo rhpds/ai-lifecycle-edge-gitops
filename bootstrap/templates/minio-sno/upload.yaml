@@ -32,7 +32,7 @@ spec:
               done
 
               echo "Verifying folders within s3-storage bucket..."
-              until mc ls myminio/s3-storage/data/ && mc ls myminio/s3-storage/models/; do
+              until mc ls myminio/s3-storage/database/ && mc ls myminio/s3-storage/models/; do
                 echo "Folders not available yet. Waiting..."
                 sleep 5
               done
@@ -70,8 +70,8 @@ spec:
               echo "Downloading models from GitHub..."
               wget https://raw.githubusercontent.com/rhpds/ai-lifecycle-edge-gitops/main/models/stress-detection/stress-detection.xml -O /tmp/stress-detection.xml
               wget https://raw.githubusercontent.com/rhpds/ai-lifecycle-edge-gitops/main/models/stress-detection/stress-detection.bin -O /tmp/stress-detection.bin
-              wget https://raw.githubusercontent.com/rhpds/ai-lifecycle-edge-gitops/main/models/time-failure/time-failure.xml -O /tmp/time-failure.xml
-              wget https://raw.githubusercontent.com/rhpds/ai-lifecycle-edge-gitops/main/models/time-failure/time-failure.bin -O /tmp/time-failure.bin
+              wget https://raw.githubusercontent.com/rhpds/ai-lifecycle-edge-gitops/main/models/time-to-failure/time-to-failure.xml -O /tmp/time-to-failure.xml
+              wget https://raw.githubusercontent.com/rhpds/ai-lifecycle-edge-gitops/main/models/time-to-failure/time-to-failure.bin -O /tmp/time-to-failure.bin
 
               echo "Configuring MinIO access..."
               /tmp/mc alias set myminio http://minio-service.minio.svc.cluster.local:9000 $MINIO_ROOT_USER $MINIO_ROOT_PASSWORD
@@ -79,8 +79,8 @@ spec:
               echo "Uploading models to MinIO..."
               /tmp/mc cp /tmp/stress-detection.xml myminio/s3-storage/models/stress-detection/1/
               /tmp/mc cp /tmp/stress-detection.bin myminio/s3-storage/models/stress-detection/1/
-              /tmp/mc cp /tmp/time-failure.xml myminio/s3-storage/models/time-failure/1/
-              /tmp/mc cp /tmp/time-failure.bin myminio/s3-storage/models/time-failure/1/
+              /tmp/mc cp /tmp/time-to-failure.xml myminio/s3-storage/models/time-to-failure/1/
+              /tmp/mc cp /tmp/time-to-failure.bin myminio/s3-storage/models/time-to-failure/1/
               
               echo "Upload completed."
           env:
