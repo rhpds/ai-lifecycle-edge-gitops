@@ -16,12 +16,12 @@ spec:
 apiVersion: route.openshift.io/v1
 kind: Route
 metadata:
-  name: time-failure-predictor
+  name: time-to-failure-predictor
   namespace: inference
 spec:
   to:
     kind: Service
-    name: time-failure-predictor
+    name: time-to-failure-predictor
   port:
     targetPort: 80
 #  tls:
