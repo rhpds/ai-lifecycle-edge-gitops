@@ -9,9 +9,15 @@ spec:
   selector:
     kubevirt.io/domain: microshift
   ports:
-  - port: 30090
+  - name: api
+    protocol: TCP
+    port: 30000
+    targetPort: 30000
+    nodePort: 30000
+  - name: ui
+    protocol: TCP
+    port: 30090
     targetPort: 30090
     nodePort: 30090
-    protocol: TCP
 {{- end }}
 
