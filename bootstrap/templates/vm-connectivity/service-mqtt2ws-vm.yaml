@@ -1,0 +1,16 @@
+{{- if .Values.vmConnectivity.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: mqtt2ws-vm
+  namespace: microshift-001
+spec:
+  type: NodePort
+  selector:
+    kubevirt.io/domain: microshift
+  ports:
+  - port: 8080
+    targetPort: 32080
+    nodePort: 32080
+    protocol: TCP
+{{- end }}
