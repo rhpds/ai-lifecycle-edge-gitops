@@ -20,10 +20,7 @@ spec:
               echo "Retrying in 5s..."
               sleep 5
             done
-            mc mb myminio/s3-storage
             mc mb myminio/pipelines
-            echo -n | mc pipe myminio/s3-storage/database/.keep
-            echo -n | mc pipe myminio/s3-storage/models/.keep
 
         env:
         - name: MINIO_ROOT_USER

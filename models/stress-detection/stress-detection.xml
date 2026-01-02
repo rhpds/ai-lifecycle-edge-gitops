@@ -1,25 +1,25 @@
 <?xml version="1.0"?>
 <net name="TensorFlow_Frontend_IR" version="11">
 	<layers>
-		<layer id="0" name="inputs" type="Parameter" version="opset1">
-			<data shape="?,8" element_type="f32" />
+		<layer id="0" name="keras_tensor" type="Parameter" version="opset1">
+			<data shape="?,9" element_type="f32" />
 			<output>
-				<port id="0" precision="FP32" names="inputs">
+				<port id="0" precision="FP32" names="keras_tensor">
 					<dim>-1</dim>
-					<dim>8</dim>
+					<dim>9</dim>
 				</port>
 			</output>
 		</layer>
-		<layer id="1" name="Transpose_1927_compressed" type="Const" version="opset1">
-			<data element_type="f16" shape="64, 8" offset="0" size="1024" />
+		<layer id="1" name="Transpose_2219_compressed" type="Const" version="opset1">
+			<data element_type="f16" shape="64, 9" offset="0" size="1152" />
 			<output>
 				<port id="0" precision="FP16">
 					<dim>64</dim>
-					<dim>8</dim>
+					<dim>9</dim>
 				</port>
 			</output>
 		</layer>
-		<layer id="2" name="Transpose_1927" type="Convert" version="opset1">
+		<layer id="2" name="Transpose_2219" type="Convert" version="opset1">
 			<data destination_type="f32" />
 			<rt_info>
 				<attribute name="decompression" version="0" />
@@ -27,26 +27,26 @@
 			<input>
 				<port id="0" precision="FP16">
 					<dim>64</dim>
-					<dim>8</dim>
+					<dim>9</dim>
 				</port>
 			</input>
 			<output>
 				<port id="1" precision="FP32">
 					<dim>64</dim>
-					<dim>8</dim>
+					<dim>9</dim>
 				</port>
 			</output>
 		</layer>
-		<layer id="3" name="sequential_1_1/dense_3_1/MatMul" type="MatMul" version="opset1">
+		<layer id="3" name="sequential_1/dense_1/MatMul" type="MatMul" version="opset1">
 			<data transpose_a="false" transpose_b="true" />
 			<input>
 				<port id="0" precision="FP32">
 					<dim>-1</dim>
-					<dim>8</dim>
+					<dim>9</dim>
 				</port>
 				<port id="1" precision="FP32">
 					<dim>64</dim>
-					<dim>8</dim>
+					<dim>9</dim>
 				</port>
 			</input>
 			<output>
@@ -56,8 +56,8 @@
 				</port>
 			</output>
 		</layer>
-		<layer id="4" name="Constant_1952_compressed" type="Const" version="opset1">
-			<data element_type="f16" shape="1, 64" offset="1024" size="128" />
+		<layer id="4" name="Constant_2360_compressed" type="Const" version="opset1">
+			<data element_type="f16" shape="1, 64" offset="1152" size="128" />
 			<output>
 				<port id="0" precision="FP16">
 					<dim>1</dim>
@@ -65,7 +65,7 @@
 				</port>
 			</output>
 		</layer>
-		<layer id="5" name="Constant_1952" type="Convert" version="opset1">
+		<layer id="5" name="Constant_2360" type="Convert" version="opset1">
 			<data destination_type="f32" />
 			<rt_info>
 				<attribute name="decompression" version="0" />
@@ -83,7 +83,7 @@
 				</port>
 			</output>
 		</layer>
-		<layer id="6" name="sequential_1_1/dense_3_1/BiasAdd" type="Add" version="opset1">
+		<layer id="6" name="sequential_1/dense_1/BiasAdd" type="Add" version="opset1">
 			<data auto_broadcast="numpy" />
 			<input>
 				<port id="0" precision="FP32">
@@ -102,7 +102,7 @@
 				</port>
 			</output>
 		</layer>
-		<layer id="7" name="sequential_1_1/dense_3_1/Relu" type="ReLU" version="opset1">
+		<layer id="7" name="sequential_1/dense_1/Relu" type="ReLU" version="opset1">
 			<input>
 				<port id="0" precision="FP32">
 					<dim>-1</dim>
@@ -116,8 +116,8 @@
 				</port>
 			</output>
 		</layer>
-		<layer id="8" name="Transpose_1932_compressed" type="Const" version="opset1">
-			<data element_type="f16" shape="32, 64" offset="1152" size="4096" />
+		<layer id="8" name="Transpose_2224_compressed" type="Const" version="opset1">
+			<data element_type="f16" shape="32, 64" offset="1280" size="4096" />
 			<output>
 				<port id="0" precision="FP16">
 					<dim>32</dim>
@@ -125,7 +125,7 @@
 				</port>
 			</output>
 		</layer>
-		<layer id="9" name="Transpose_1932" type="Convert" version="opset1">
+		<layer id="9" name="Transpose_2224" type="Convert" version="opset1">
 			<data destination_type="f32" />
 			<rt_info>
 				<attribute name="decompression" version="0" />
@@ -143,7 +143,7 @@
 				</port>
 			</output>
 		</layer>
-		<layer id="10" name="sequential_1_1/dense_4_1/MatMul" type="MatMul" version="opset1">
+		<layer id="10" name="sequential_1/dense_1_2/MatMul" type="MatMul" version="opset1">
 			<data transpose_a="false" transpose_b="true" />
 			<input>
 				<port id="0" precision="FP32">
@@ -162,8 +162,8 @@
 				</port>
 			</output>
 		</layer>
-		<layer id="11" name="Constant_1953_compressed" type="Const" version="opset1">
-			<data element_type="f16" shape="1, 32" offset="5248" size="64" />
+		<layer id="11" name="Constant_2361_compressed" type="Const" version="opset1">
+			<data element_type="f16" shape="1, 32" offset="5376" size="64" />
 			<output>
 				<port id="0" precision="FP16">
 					<dim>1</dim>
@@ -171,7 +171,7 @@
 				</port>
 			</output>
 		</layer>
-		<layer id="12" name="Constant_1953" type="Convert" version="opset1">
+		<layer id="12" name="Constant_2361" type="Convert" version="opset1">
 			<data destination_type="f32" />
 			<rt_info>
 				<attribute name="decompression" version="0" />
@@ -189,7 +189,7 @@
 				</port>
 			</output>
 		</layer>
-		<layer id="13" name="sequential_1_1/dense_4_1/BiasAdd" type="Add" version="opset1">
+		<layer id="13" name="sequential_1/dense_1_2/BiasAdd" type="Add" version="opset1">
 			<data auto_broadcast="numpy" />
 			<input>
 				<port id="0" precision="FP32">
@@ -208,7 +208,7 @@
 				</port>
 			</output>
 		</layer>
-		<layer id="14" name="sequential_1_1/dense_4_1/Relu" type="ReLU" version="opset1">
+		<layer id="14" name="sequential_1/dense_1_2/Relu" type="ReLU" version="opset1">
 			<input>
 				<port id="0" precision="FP32">
 					<dim>-1</dim>
@@ -222,8 +222,8 @@
 				</port>
 			</output>
 		</layer>
-		<layer id="15" name="Transpose_1937_compressed" type="Const" version="opset1">
-			<data element_type="f16" shape="1, 32" offset="5312" size="64" />
+		<layer id="15" name="Transpose_2229_compressed" type="Const" version="opset1">
+			<data element_type="f16" shape="1, 32" offset="5440" size="64" />
 			<output>
 				<port id="0" precision="FP16">
 					<dim>1</dim>
@@ -231,7 +231,7 @@
 				</port>
 			</output>
 		</layer>
-		<layer id="16" name="Transpose_1937" type="Convert" version="opset1">
+		<layer id="16" name="Transpose_2229" type="Convert" version="opset1">
 			<data destination_type="f32" />
 			<rt_info>
 				<attribute name="decompression" version="0" />
@@ -249,7 +249,7 @@
 				</port>
 			</output>
 		</layer>
-		<layer id="17" name="sequential_1_1/dense_5_1/MatMul" type="MatMul" version="opset1">
+		<layer id="17" name="sequential_1/dense_2_1/MatMul" type="MatMul" version="opset1">
 			<data transpose_a="false" transpose_b="true" />
 			<input>
 				<port id="0" precision="FP32">
@@ -268,8 +268,8 @@
 				</port>
 			</output>
 		</layer>
-		<layer id="18" name="Constant_1954_compressed" type="Const" version="opset1">
-			<data element_type="f16" shape="1, 1" offset="5376" size="2" />
+		<layer id="18" name="Constant_2362_compressed" type="Const" version="opset1">
+			<data element_type="f16" shape="1, 1" offset="5504" size="2" />
 			<output>
 				<port id="0" precision="FP16">
 					<dim>1</dim>
@@ -277,7 +277,7 @@
 				</port>
 			</output>
 		</layer>
-		<layer id="19" name="Constant_1954" type="Convert" version="opset1">
+		<layer id="19" name="Constant_2362" type="Convert" version="opset1">
 			<data destination_type="f32" />
 			<rt_info>
 				<attribute name="decompression" version="0" />
@@ -295,7 +295,7 @@
 				</port>
 			</output>
 		</layer>
-		<layer id="20" name="sequential_1_1/dense_5_1/Add" type="Add" version="opset1">
+		<layer id="20" name="sequential_1/dense_2_1/Add" type="Add" version="opset1">
 			<data auto_broadcast="numpy" />
 			<input>
 				<port id="0" precision="FP32">
@@ -314,7 +314,7 @@
 				</port>
 			</output>
 		</layer>
-		<layer id="21" name="sequential_1_1/dense_5_1/Sigmoid" type="Sigmoid" version="opset1">
+		<layer id="21" name="sequential_1/dense_2_1/Sigmoid" type="Sigmoid" version="opset1">
 			<input>
 				<port id="0" precision="FP32">
 					<dim>-1</dim>
@@ -328,7 +328,7 @@
 				</port>
 			</output>
 		</layer>
-		<layer id="22" name="output_0" type="Result" version="opset1">
+		<layer id="22" name="output_0" type="Result" version="opset1" output_names="output_0">
 			<input>
 				<port id="0" precision="FP32">
 					<dim>-1</dim>
@@ -362,13 +362,10 @@
 		<edge from-layer="21" from-port="1" to-layer="22" to-port="0" />
 	</edges>
 	<rt_info>
-		<MO_version value="2024.6.0-17404-4c0f47d2335-releases/2024/6" />
-		<Runtime_version value="2024.6.0-17404-4c0f47d2335-releases/2024/6" />
+		<Runtime_version value="2025.4.1-20426-82bbf0292c5-releases/2025/4" />
 		<conversion_parameters>
-			<is_python_api_used value="False" />
-			<output_dir value="DIR" />
-			<saved_model_dir value="DIR" />
+			<is_python_object value="False" />
+			<output_model value="models/battery_stress_model_ir/saved_model" />
 		</conversion_parameters>
-		<legacy_frontend value="False" />
 	</rt_info>
 </net>

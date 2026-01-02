@@ -17,10 +17,7 @@ spec:
               echo "Retrying in 5s..."
               sleep 5
             done
-            mc mb myminio/data
             mc mb myminio/inference
-            echo -n | mc pipe myminio/data/.keep
-            echo -n | mc pipe myminio/inference/.keep
 
         env:
         - name: MINIO_ROOT_USER
