@@ -9,7 +9,7 @@ spec:
     kind: Service
     name: mqtt2ws-vm
   port:
-    targetPort: 8080
+    targetPort: 32080
   tls:
     termination: edge
 {{- end }}
