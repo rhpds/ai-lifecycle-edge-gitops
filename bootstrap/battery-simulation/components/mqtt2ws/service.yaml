@@ -13,11 +13,13 @@ spec:
       protocol: TCP
       port: 8443
       targetPort: 8443
+      nodePort: 31567
     - name: 8080-tcp
       protocol: TCP
       port: 8080
       targetPort: 8080
-  type: ClusterIP
+      nodePort: 32080
+  type: NodePort
   selector:
     app: mqtt2ws
     deployment: mqtt2ws
