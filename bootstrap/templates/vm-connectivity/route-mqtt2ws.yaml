@@ -1,0 +1,15 @@
+{{- if .Values.vmConnectivity.enabled }}
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: mqtt2ws
+  namespace: microshift-001
+spec:
+  to:
+    kind: Service
+    name: mqtt2ws-vm
+  port:
+    targetPort: 8080
+  tls:
+    termination: edge
+{{- end }}
