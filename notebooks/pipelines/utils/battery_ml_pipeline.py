@@ -327,7 +327,7 @@ def train_ttf_model(
 
 @component(
     base_image="registry.access.redhat.com/ubi9/python-311:latest",
-    packages_to_install=["boto3", "pandas", "tensorflow", "numpy"]
+    packages_to_install=["boto3", "pandas", "openvino", "numpy"]
 )
 def validate_stress_model(
     new_model: Input[Model],
@@ -339,14 +339,14 @@ def validate_stress_model(
     aws_s3_bucket: str
 ) -> NamedTuple('Outputs', [('should_update', str), ('new_accuracy', float), ('current_accuracy', float)]):
     """
-    Component: Validate stress model against existing model in S3
+    Component: Validate stress model against existing model in S3 using OpenVINO
     """
     import boto3
     import os
     import tempfile
-    import tensorflow as tf
     import pandas as pd
     import numpy as np
+    from openvino.runtime import Core
     from botocore.exceptions import ClientError
     
     should_update = "false"
@@ -361,17 +361,22 @@ def validate_stress_model(
             endpoint_url=aws_s3_endpoint
         )
         
-        # Try to download existing model from S3
+        # Try to download existing OpenVINO model from S3
         temp_dir = tempfile.mkdtemp()
-        keras_model_s3_key = "stress-detection/1/model.keras"
-        keras_model_local = os.path.join(temp_dir, "model.keras")
+        xml_s3_key = "stress-detection/1/stress-detection.xml"
+        bin_s3_key = "stress-detection/1/stress-detection.bin"
+        xml_local = os.path.join(temp_dir, "stress-detection.xml")
+        bin_local = os.path.join(temp_dir, "stress-detection.bin")
         
         try:
-            s3_client.download_file(aws_s3_bucket, keras_model_s3_key, keras_model_local)
-            print(f"Found existing model in S3, downloading for comparison...")
+            s3_client.download_file(aws_s3_bucket, xml_s3_key, xml_local)
+            s3_client.download_file(aws_s3_bucket, bin_s3_key, bin_local)
+            print(f"Found existing OpenVINO model in S3, downloading for comparison...")
             
-            # Load existing model and evaluate
-            existing_model = tf.keras.models.load_model(keras_model_local)
+            # Load existing model with OpenVINO
+            core = Core()
+            existing_model = core.compile_model(xml_local, "CPU")
+            infer_request = existing_model.create_infer_request()
             
             # Load test data and evaluate
             df = pd.read_csv(prepared_data.path)
@@ -394,8 +399,17 @@ def validate_stress_model(
             X_std = X.std(axis=0) + 1e-8
             X_normalized = (X - X_mean) / X_std
             
-            # Evaluate existing model
-            _, current_accuracy = existing_model.evaluate(X_normalized, y, verbose=0)
+            # Evaluate existing model using OpenVINO inference
+            correct = 0
+            for i in range(len(X_normalized)):
+                input_data = X_normalized[i:i+1]
+                infer_request.infer({0: input_data})
+                output = infer_request.get_output_tensor(0).data
+                prediction = 1 if output[0][0] > 0.5 else 0
+                if prediction == y[i]:
+                    correct += 1
+            
+            current_accuracy = correct / len(y)
             
             print(f"Current model accuracy: {current_accuracy:.4f}")
             print(f"New model accuracy: {new_model_accuracy:.4f}")
@@ -431,7 +445,7 @@ def validate_stress_model(
 
 @component(
     base_image="registry.access.redhat.com/ubi9/python-311:latest",
-    packages_to_install=["boto3", "pandas", "tensorflow", "numpy", "scikit-learn"]
+    packages_to_install=["boto3", "pandas", "openvino", "numpy", "scikit-learn"]
 )
 def validate_ttf_model(
     new_model: Input[Model],
@@ -443,14 +457,14 @@ def validate_ttf_model(
     aws_s3_bucket: str
 ) -> NamedTuple('Outputs', [('should_update', str), ('new_mae', float), ('current_mae', float)]):
     """
-    Component: Validate TTF model against existing model in S3
+    Component: Validate TTF model against existing model in S3 using OpenVINO
     """
     import boto3
     import os
     import tempfile
-    import tensorflow as tf
     import pandas as pd
     import numpy as np
+    from openvino.runtime import Core
     from sklearn.metrics import mean_absolute_error
     from botocore.exceptions import ClientError
     
@@ -466,17 +480,22 @@ def validate_ttf_model(
             endpoint_url=aws_s3_endpoint
         )
         
-        # Try to download existing model from S3
+        # Try to download existing OpenVINO model from S3
         temp_dir = tempfile.mkdtemp()
-        keras_model_s3_key = "time-to-failure/1/model.keras"
-        keras_model_local = os.path.join(temp_dir, "model.keras")
+        xml_s3_key = "time-to-failure/1/time-to-failure.xml"
+        bin_s3_key = "time-to-failure/1/time-to-failure.bin"
+        xml_local = os.path.join(temp_dir, "time-to-failure.xml")
+        bin_local = os.path.join(temp_dir, "time-to-failure.bin")
         
         try:
-            s3_client.download_file(aws_s3_bucket, keras_model_s3_key, keras_model_local)
-            print(f"Found existing TTF model in S3, downloading for comparison...")
+            s3_client.download_file(aws_s3_bucket, xml_s3_key, xml_local)
+            s3_client.download_file(aws_s3_bucket, bin_s3_key, bin_local)
+            print(f"Found existing TTF OpenVINO model in S3, downloading for comparison...")
             
-            # Load existing model and evaluate
-            existing_model = tf.keras.models.load_model(keras_model_local)
+            # Load existing model with OpenVINO
+            core = Core()
+            existing_model = core.compile_model(xml_local, "CPU")
+            infer_request = existing_model.create_infer_request()
             
             # Load test data and evaluate
             df = pd.read_csv(prepared_data.path)
@@ -492,8 +511,15 @@ def validate_ttf_model(
             X_std = X.std(axis=0) + 1e-8
             X_normalized = (X - X_mean) / X_std
             
-            # Predict and calculate MAE
-            y_pred = existing_model.predict(X_normalized, verbose=0).flatten()
+            # Predict using OpenVINO inference
+            predictions = []
+            for i in range(len(X_normalized)):
+                input_data = X_normalized[i:i+1]
+                infer_request.infer({0: input_data})
+                output = infer_request.get_output_tensor(0).data
+                predictions.append(output[0][0])
+            
+            y_pred = np.array(predictions)
             current_mae = mean_absolute_error(y, y_pred)
             
             print(f"Current model MAE: {current_mae:.4f} hours")
