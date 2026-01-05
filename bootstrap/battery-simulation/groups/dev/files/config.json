@@ -1,4 +1,4 @@
 {
-    "BATTERY_METRICS_WS_ENDPOINT": "wss://mqtt2ws-microshift-001.apps.cluster-cl4vv.dynamic.redhatworkshops.io/battery/metrics/",
+    "BATTERY_METRICS_WS_ENDPOINT": "wss://mqtt2ws-microshift-001.apps.cluster-cl4vv.apps.DOMAIN_PLACEHOLDER/battery/metrics/",
     "OPEN_AI_API_KEY": "my-key"
 }
