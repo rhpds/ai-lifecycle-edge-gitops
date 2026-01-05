@@ -122,7 +122,7 @@ def prepare_data(
 
 @component(
     base_image="registry.access.redhat.com/ubi9/python-311:latest",
-    packages_to_install=["pandas", "scikit-learn", "tensorflow", "openvino-dev==2024.6.0"]
+    packages_to_install=["pandas", "scikit-learn", "tensorflow", "openvino", "joblib"]
 )
 def train_stress_detection_model(
     prepared_data: Input[Dataset],
@@ -190,6 +190,12 @@ def train_stress_detection_model(
     model_dir = stress_model.path
     os.makedirs(model_dir, exist_ok=True)
     
+    # Save scaler for inference preprocessing
+    import joblib
+    scaler_path = os.path.join(model_dir, "stress_scaler.pkl")
+    joblib.dump(scaler, scaler_path)
+    print(f"Scaler saved to {scaler_path}")
+    
     # Save in Keras native format for validation
     keras_model_path = os.path.join(model_dir, "model.keras")
     mlp_tf.save(keras_model_path)
@@ -201,7 +207,7 @@ def train_stress_detection_model(
     # Convert to OpenVINO format
     try:
         import subprocess
-        cmd = f"mo --saved_model_dir {saved_model_path} --output_dir {model_dir}"
+        cmd = f"ovc {saved_model_path} --output_model {model_dir}/model"
         subprocess.run(cmd, shell=True, check=True, capture_output=True, text=True)
         print("Model converted to OpenVINO format (.xml/.bin)")
     except subprocess.CalledProcessError as e:
@@ -220,7 +226,7 @@ def train_stress_detection_model(
 
 @component(
     base_image="registry.access.redhat.com/ubi9/python-311:latest",
-    packages_to_install=["pandas", "scikit-learn", "tensorflow", "openvino-dev==2024.6.0"]
+    packages_to_install=["pandas", "scikit-learn", "tensorflow", "openvino", "joblib"]
 )
 def train_ttf_model(
     prepared_data: Input[Dataset],
@@ -262,16 +268,17 @@ def train_ttf_model(
     X_train_scaled = scaler.fit_transform(X_train)
     X_test_scaled = scaler.transform(X_test)
     
-    # Define neural network for regression
+    # Define neural network for regression (3 hidden layers)
     ttf_model_tf = keras.Sequential([
         keras.layers.Input(shape=(X_train.shape[1],)),
+        keras.layers.Dense(128, activation='relu'),
         keras.layers.Dense(64, activation='relu'),
         keras.layers.Dense(32, activation='relu'),
         keras.layers.Dense(1)  # No activation for regression
     ])
     
     # Compile model
-    ttf_model_tf.compile(optimizer='adam', loss='mae', metrics=['mae'])
+    ttf_model_tf.compile(optimizer='adam', loss='mse', metrics=['mae'])
     
     # Train model
     history = ttf_model_tf.fit(X_train_scaled, y_train, epochs=50, batch_size=32, 
@@ -285,6 +292,12 @@ def train_ttf_model(
     model_dir = ttf_model.path
     os.makedirs(model_dir, exist_ok=True)
     
+    # Save scaler for inference preprocessing
+    import joblib
+    scaler_path = os.path.join(model_dir, "ttf_scaler.pkl")
+    joblib.dump(scaler, scaler_path)
+    print(f"Scaler saved to {scaler_path}")
+    
     # Save in Keras native format for validation
     keras_model_path = os.path.join(model_dir, "model.keras")
     ttf_model_tf.save(keras_model_path)
@@ -296,7 +309,7 @@ def train_ttf_model(
     # Convert to OpenVINO format
     try:
         import subprocess
-        cmd = f"mo --saved_model_dir {saved_model_path} --output_dir {model_dir}"
+        cmd = f"ovc {saved_model_path} --output_model {model_dir}/model"
         subprocess.run(cmd, shell=True, check=True, capture_output=True, text=True)
         print("TTF model converted to OpenVINO format (.xml/.bin)")
     except subprocess.CalledProcessError as e:
@@ -350,7 +363,7 @@ def validate_stress_model(
         
         # Try to download existing model from S3
         temp_dir = tempfile.mkdtemp()
-        keras_model_s3_key = "models/serving/stress-detection/model.keras"
+        keras_model_s3_key = "stress-detection/1/model.keras"
         keras_model_local = os.path.join(temp_dir, "model.keras")
         
         try:
@@ -455,7 +468,7 @@ def validate_ttf_model(
         
         # Try to download existing model from S3
         temp_dir = tempfile.mkdtemp()
-        keras_model_s3_key = "models/serving/time-to-failure/model.keras"
+        keras_model_s3_key = "time-to-failure/1/model.keras"
         keras_model_local = os.path.join(temp_dir, "model.keras")
         
         try:
@@ -543,12 +556,21 @@ def save_stress_model_to_s3(
             endpoint_url=aws_s3_endpoint
         )
         
-        # Upload stress model to models/serving/stress-detection/
+        # Upload only required files: .xml, .bin, and scaler
         stress_model_files = []
         for root, dirs, files in os.walk(stress_model.path):
             for file in files:
                 file_path = os.path.join(root, file)
-                s3_key = f"models/serving/stress-detection/{os.path.relpath(file_path, stress_model.path)}"
+                # Only upload .xml, .bin and scaler files
+                if file.endswith('.xml'):
+                    s3_key = "stress-detection/1/stress-detection.xml"
+                elif file.endswith('.bin'):
+                    s3_key = "stress-detection/1/stress-detection.bin"
+                elif file == "stress_scaler.pkl":
+                    s3_key = "scalers/stress_scaler.pkl"
+                else:
+                    # Skip other files (.keras, .pb, .index, .data-*)
+                    continue
                 s3_client.upload_file(file_path, aws_s3_bucket, s3_key)
                 stress_model_files.append(s3_key)
         
@@ -594,12 +616,21 @@ def save_ttf_model_to_s3(
             endpoint_url=aws_s3_endpoint
         )
         
-        # Upload TTF model to models/serving/time-to-failure/
+        # Upload only required files: .xml, .bin, and scaler
         ttf_model_files = []
         for root, dirs, files in os.walk(ttf_model.path):
             for file in files:
                 file_path = os.path.join(root, file)
-                s3_key = f"models/serving/time-to-failure/{os.path.relpath(file_path, ttf_model.path)}"
+                # Only upload .xml, .bin and scaler files
+                if file.endswith('.xml'):
+                    s3_key = "time-to-failure/1/time-to-failure.xml"
+                elif file.endswith('.bin'):
+                    s3_key = "time-to-failure/1/time-to-failure.bin"
+                elif file == "ttf_scaler.pkl":
+                    s3_key = "scalers/ttf_scaler.pkl"
+                else:
+                    # Skip other files (.keras, .pb, .index, .data-*)
+                    continue
                 s3_client.upload_file(file_path, aws_s3_bucket, s3_key)
                 ttf_model_files.append(s3_key)
         
@@ -629,7 +660,7 @@ def save_ttf_model_to_s3(
 )
 def battery_ml_pipeline(
     # InfluxDB parameters
-    influxdb_url: str = "https://influxdb-battery-demo.apps.sno.pemlab.rdu2.redhat.com/",
+    influxdb_url: str = "https://influxdb-battery-demo.apps.replace-domain.io/",
     influxdb_token: str = "admin_token",
     influxdb_org: str = "redhat",
     influxdb_bucket: str = "bms",
@@ -637,8 +668,8 @@ def battery_ml_pipeline(
     # S3 parameters
     aws_access_key_id: str = "minio",
     aws_secret_access_key: str = "minio123",
-    aws_s3_endpoint: str = "http://minio-service.minio.svc.cluster.local:9000",
-    aws_s3_bucket: str = "s3-storage"
+    aws_s3_endpoint: str = "http://minio-microshift-vm.microshift-001.svc.cluster.local:30000",
+    aws_s3_bucket: str = "inference"
 ):
     """
     Main pipeline using UBI images for optimal OpenShift compatibility
