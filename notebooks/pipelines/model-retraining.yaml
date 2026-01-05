@@ -542,7 +542,7 @@ deploymentSpec:
           \ format for OpenVINO conversion\n    saved_model_path = os.path.join(model_dir,\
           \ \"saved_model\")\n    tf.saved_model.save(mlp_tf, saved_model_path)\n\n\
           \    # Convert to OpenVINO format\n    try:\n        import subprocess\n\
-          \        cmd = f\"ovc {saved_model_path} --output_model {model_dir}/model "\
+          \        cmd = f\"ovc {saved_model_path} --output_model {model_dir}/model\"\
           \n        subprocess.run(cmd, shell=True, check=True, capture_output=True,\
           \ text=True)\n        print(\"Model converted to OpenVINO format (.xml/.bin)\"\
           )\n    except subprocess.CalledProcessError as e:\n        print(f\"OpenVINO\
@@ -616,7 +616,7 @@ deploymentSpec:
           \ = os.path.join(model_dir, \"saved_model\")\n    tf.saved_model.save(ttf_model_tf,\
           \ saved_model_path)\n\n    # Convert to OpenVINO format\n    try:\n    \
           \    import subprocess\n        cmd = f\"ovc {saved_model_path}\
-          \ --output_model {model_dir}/model "\n        subprocess.run(cmd, shell=True, check=True,\
+          \ --output_model {model_dir}/model\"\n        subprocess.run(cmd, shell=True, check=True,\
           \ capture_output=True, text=True)\n        print(\"TTF model converted to\
           \ OpenVINO format (.xml/.bin)\")\n    except subprocess.CalledProcessError\
           \ as e:\n        print(f\"OpenVINO conversion failed: {e}\")\n        print(\"\
