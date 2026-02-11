@@ -13,4 +13,5 @@ resources:
 - sa.yaml
 - inferenceservice-stressdetection.yaml
 - inferenceservice-timefailure.yaml
+- service-stress-detection-nodeport.yaml
 - route.yaml

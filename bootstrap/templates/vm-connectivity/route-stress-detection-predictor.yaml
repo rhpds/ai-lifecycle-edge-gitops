@@ -1,0 +1,15 @@
+{{- if .Values.vmConnectivity.enabled }}
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: stress-detection-predictor
+  namespace: microshift-001
+spec:
+  to:
+    kind: Service
+    name: stress-detection-predictor-vm
+  port:
+    targetPort: 30888
+  tls:
+    termination: edge
+{{- end }}

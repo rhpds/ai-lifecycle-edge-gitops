@@ -1,0 +1,17 @@
+{{- if .Values.vmConnectivity.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: stress-detection-predictor-vm
+  namespace: microshift-001
+spec:
+  type: NodePort
+  selector:
+    kubevirt.io/domain: microshift
+  ports:
+  - name: http
+    port: 30888
+    targetPort: 30888
+    nodePort: 30888
+    protocol: TCP
+{{- end }}
