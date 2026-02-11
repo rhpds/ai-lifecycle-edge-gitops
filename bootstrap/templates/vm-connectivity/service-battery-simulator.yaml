@@ -1,0 +1,20 @@
+{{- if .Values.vmConnectivity.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: battery-simulation-vm
+  namespace: microshift-001
+spec:
+  type: NodePort
+  selector:
+    kubevirt.io/domain: microshift
+  ports:
+  - port: 30808
+    targetPort: 30808
+    nodePort: 30808
+    protocol: TCP
+  - port: 30843
+    targetPort: 30843
+    nodePort: 30843
+    protocol: TCP
+{{- end }}

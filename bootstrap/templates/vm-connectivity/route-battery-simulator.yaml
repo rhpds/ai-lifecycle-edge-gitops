@@ -1,0 +1,15 @@
+{{- if .Values.vmConnectivity.enabled }}
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: battery-simulation
+  namespace: microshift-001
+spec:
+  to:
+    kind: Service
+    name: battery-simulation-vm
+  port:
+    targetPort: 30808
+  tls:
+    termination: edge
+{{- end }}

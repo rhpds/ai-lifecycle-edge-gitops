@@ -14,12 +14,14 @@ spec:
       protocol: TCP
       port: 8080
       targetPort: 8080
+      nodePort: 30808
     - name: 8443-tcp
       protocol: TCP
       port: 8443
       targetPort: 8443
+      nodePort: 30843
   internalTrafficPolicy: Cluster
-  type: ClusterIP
+  type: NodePort
   selector:
     app: battery-simulation
     deployment: battery-simulation
