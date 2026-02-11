@@ -1,0 +1,17 @@
+{{- if .Values.vmConnectivity.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: time-to-failure-predictor-vm
+  namespace: microshift-001
+spec:
+  type: NodePort
+  selector:
+    kubevirt.io/domain: microshift
+  ports:
+  - name: http
+    port: 30889
+    targetPort: 30889
+    nodePort: 30889
+    protocol: TCP
+{{- end }}
