@@ -5,7 +5,11 @@ metadata:
 data:
   config.json: |-
     {
-    "BATTERY_METRICS_WS_ENDPOINT": "ws://websocket-namespace.domain/battery/metrics/",
-    "OPEN_AI_API_KEY": "my-key"
+    "BATTERY_METRICS_WS_ENDPOINT": "wss://mqtt2ws-microshift-001.apps.cluster-bwq4q.dynamic.redhatworkshops.io/battery/metrics/",
+    "OPEN_AI_API_KEY": "my-key",
+    "STRESS_DETECTION_AI_API_ENDPOINT": "https://stress-detection-ai-edge-project.apps.cluster-bwq4q.dynamic.redhatworkshops.io/",
+    "TIME_TO_FAILURE_AI_API_ENDPOINT": "https://time-to-failure-ai-edge-project.apps.cluster-bwq4q.dynamic.redhatworkshops.io/",
+    "BATTERY_SIMULATION_API_ENDPOINT": "https://battery-simulation-microshift-001.apps.cluster-bwq4q.dynamic.redhatworkshops.io/",
+    "AUTO_INFERENCE_INTERVAL_MS": 30000
     }
 
