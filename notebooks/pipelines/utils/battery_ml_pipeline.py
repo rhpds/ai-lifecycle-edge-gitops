@@ -268,10 +268,11 @@ def train_ttf_model(
     X_train_scaled = scaler.fit_transform(X_train)
     X_test_scaled = scaler.transform(X_test)
     
-    # Define neural network for regression (3 hidden layers)
+    # Define neural network for regression (3 hidden layers).
+    # Use input_shape in first Dense (no explicit Input layer) so SavedModel/OpenVINO
+    # input name is "keras_tensor", matching the notebook 05_bms-ttf-training.
     ttf_model_tf = keras.Sequential([
-        keras.layers.Input(shape=(X_train.shape[1],)),
-        keras.layers.Dense(128, activation='relu'),
+        keras.layers.Dense(128, activation='relu', input_shape=(X_train.shape[1],)),
         keras.layers.Dense(64, activation='relu'),
         keras.layers.Dense(32, activation='relu'),
         keras.layers.Dense(1)  # No activation for regression
@@ -302,9 +303,12 @@ def train_ttf_model(
     keras_model_path = os.path.join(model_dir, "model.keras")
     ttf_model_tf.save(keras_model_path)
     
-    # Save as SavedModel format for OpenVINO conversion
+    # Save as SavedModel using Keras API (same as notebook) so input name is "keras_tensor"
     saved_model_path = os.path.join(model_dir, "saved_model")
-    tf.saved_model.save(ttf_model_tf, saved_model_path)
+    try:
+        ttf_model_tf.export(saved_model_path)
+    except AttributeError:
+        ttf_model_tf.save(saved_model_path, save_format="tf")
     
     # Convert to OpenVINO format
     try:

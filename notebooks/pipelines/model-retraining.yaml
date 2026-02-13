@@ -408,12 +408,14 @@ deploymentSpec:
           \        )\n\n        # Upload only required files: .xml, .bin, and scaler\n\
           \        stress_model_files = []\n        for root, dirs, files in os.walk(stress_model.path):\n\
           \            for file in files:\n                file_path = os.path.join(root,\
-          \ file)\n                # Only upload .xml, .bin and scaler files\n\
-          \                if file.endswith('.xml'):\n                    s3_key = \"stress-detection/1/stress-detection.xml\"\
-          \n                elif file.endswith('.bin'):\n                    s3_key = \"stress-detection/1/stress-detection.bin\"\
-          \n                elif file == \"stress_scaler.pkl\":\n                    s3_key = \"scalers/stress_scaler.pkl\"\
-          \n                else:\n                    # Skip other files (.keras, .pb, .index, .data-*)\n                    continue\
-          \n                s3_client.upload_file(file_path,\
+          \ file)\n                # Only upload .xml, .bin and scaler files\n   \
+          \             if file.endswith('.xml'):\n                    s3_key = \"\
+          stress-detection/1/stress-detection.xml\"\n                elif file.endswith('.bin'):\n\
+          \                    s3_key = \"stress-detection/1/stress-detection.bin\"\
+          \n                elif file == \"stress_scaler.pkl\":\n                \
+          \    s3_key = \"scalers/stress_scaler.pkl\"\n                else:\n   \
+          \                 # Skip other files (.keras, .pb, .index, .data-*)\n  \
+          \                  continue\n                s3_client.upload_file(file_path,\
           \ aws_s3_bucket, s3_key)\n                stress_model_files.append(s3_key)\n\
           \n        status = f\"Successfully uploaded {len(stress_model_files)} stress\
           \ model files to S3\"\n        print(status)\n\n    except ClientError as\
@@ -461,12 +463,14 @@ deploymentSpec:
           \        )\n\n        # Upload only required files: .xml, .bin, and scaler\n\
           \        ttf_model_files = []\n        for root, dirs, files in os.walk(ttf_model.path):\n\
           \            for file in files:\n                file_path = os.path.join(root,\
-          \ file)\n                # Only upload .xml, .bin and scaler files\n\
-          \                if file.endswith('.xml'):\n                    s3_key = \"time-to-failure/1/time-to-failure.xml\"\
-          \n                elif file.endswith('.bin'):\n                    s3_key = \"time-to-failure/1/time-to-failure.bin\"\
-          \n                elif file == \"ttf_scaler.pkl\":\n                    s3_key = \"scalers/ttf_scaler.pkl\"\
-          \n                else:\n                    # Skip other files (.keras, .pb, .index, .data-*)\n                    continue\
-          \n                s3_client.upload_file(file_path, aws_s3_bucket,\
+          \ file)\n                # Only upload .xml, .bin and scaler files\n   \
+          \             if file.endswith('.xml'):\n                    s3_key = \"\
+          time-to-failure/1/time-to-failure.xml\"\n                elif file.endswith('.bin'):\n\
+          \                    s3_key = \"time-to-failure/1/time-to-failure.bin\"\n\
+          \                elif file == \"ttf_scaler.pkl\":\n                    s3_key\
+          \ = \"scalers/ttf_scaler.pkl\"\n                else:\n                \
+          \    # Skip other files (.keras, .pb, .index, .data-*)\n               \
+          \     continue\n                s3_client.upload_file(file_path, aws_s3_bucket,\
           \ s3_key)\n                ttf_model_files.append(s3_key)\n\n        status\
           \ = f\"Successfully uploaded {len(ttf_model_files)} TTF model files to S3\"\
           \n        print(status)\n\n    except ClientError as e:\n        status\
@@ -489,9 +493,9 @@ deploymentSpec:
         - "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip ||\
           \ python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1\
           \ python3 -m pip install --quiet --no-warn-script-location 'pandas' 'scikit-learn'\
-          \ 'tensorflow' 'openvino' 'joblib'  &&  python3 -m pip install --quiet\
-          \ --no-warn-script-location 'kfp==2.14.4' '--no-deps' 'typing-extensions>=3.7.4,<5;\
-          \ python_version<\"3.9\"' && \"$0\" \"$@\"\n"
+          \ 'tensorflow' 'openvino' 'joblib'  &&  python3 -m pip install --quiet --no-warn-script-location\
+          \ 'kfp==2.14.4' '--no-deps' 'typing-extensions>=3.7.4,<5; python_version<\"\
+          3.9\"' && \"$0\" \"$@\"\n"
         - sh
         - -ec
         - 'program_path=$(mktemp -d)
@@ -509,7 +513,7 @@ deploymentSpec:
           \ stress detection model with OpenVINO conversion\n    \"\"\"\n    import\
           \ pandas as pd\n    from sklearn.model_selection import train_test_split\n\
           \    from sklearn.preprocessing import StandardScaler\n    import tensorflow\
-          \ as tf\n    from tensorflow import keras\n    import os\n    import joblib\n\n    # Force\
+          \ as tf\n    from tensorflow import keras\n    import os\n\n    # Force\
           \ CPU usage to avoid CUDA issues\n    os.environ['CUDA_VISIBLE_DEVICES']\
           \ = '-1'\n\n    # Load data\n    df = pd.read_csv(prepared_data.path)\n\n\
           \    # Define stress condition (1 = Stress, 0 = Normal)\n    def detect_stress(row):\n\
@@ -534,10 +538,11 @@ deploymentSpec:
           \ y_train, epochs=50, batch_size=32, \n                        validation_split=0.1,\
           \ verbose=0)\n\n    # Evaluate model\n    test_loss, test_accuracy = mlp_tf.evaluate(X_test_scaled,\
           \ y_test, verbose=0)\n\n    # Create model directory and save\n    model_dir\
-          \ = stress_model.path\n    os.makedirs(model_dir, exist_ok=True)\n\n    # Save scaler for inference preprocessing\n\
-          \    scaler_path = os.path.join(model_dir, \"stress_scaler.pkl\")\n    joblib.dump(scaler, scaler_path)\n\
-          \    print(f\"Scaler saved to {scaler_path}\")\n\n   \
-          \ # Save in Keras native format for validation\n    keras_model_path = os.path.join(model_dir,\
+          \ = stress_model.path\n    os.makedirs(model_dir, exist_ok=True)\n\n   \
+          \ # Save scaler for inference preprocessing\n    import joblib\n    scaler_path\
+          \ = os.path.join(model_dir, \"stress_scaler.pkl\")\n    joblib.dump(scaler,\
+          \ scaler_path)\n    print(f\"Scaler saved to {scaler_path}\")\n\n    # Save\
+          \ in Keras native format for validation\n    keras_model_path = os.path.join(model_dir,\
           \ \"model.keras\")\n    mlp_tf.save(keras_model_path)\n\n    # Save as SavedModel\
           \ format for OpenVINO conversion\n    saved_model_path = os.path.join(model_dir,\
           \ \"saved_model\")\n    tf.saved_model.save(mlp_tf, saved_model_path)\n\n\
@@ -567,9 +572,9 @@ deploymentSpec:
         - "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip ||\
           \ python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1\
           \ python3 -m pip install --quiet --no-warn-script-location 'pandas' 'scikit-learn'\
-          \ 'tensorflow' 'openvino' 'joblib'  &&  python3 -m pip install --quiet\
-          \ --no-warn-script-location 'kfp==2.14.4' '--no-deps' 'typing-extensions>=3.7.4,<5;\
-          \ python_version<\"3.9\"' && \"$0\" \"$@\"\n"
+          \ 'tensorflow' 'openvino' 'joblib'  &&  python3 -m pip install --quiet --no-warn-script-location\
+          \ 'kfp==2.14.4' '--no-deps' 'typing-extensions>=3.7.4,<5; python_version<\"\
+          3.9\"' && \"$0\" \"$@\"\n"
         - sh
         - -ec
         - 'program_path=$(mktemp -d)
@@ -587,7 +592,7 @@ deploymentSpec:
           \  import pandas as pd\n    from sklearn.model_selection import train_test_split\n\
           \    from sklearn.metrics import mean_absolute_error\n    from sklearn.preprocessing\
           \ import StandardScaler\n    import tensorflow as tf\n    from tensorflow\
-          \ import keras\n    import os\n    import joblib\n\n    # Force CPU usage\n    os.environ['CUDA_VISIBLE_DEVICES']\
+          \ import keras\n    import os\n\n    # Force CPU usage\n    os.environ['CUDA_VISIBLE_DEVICES']\
           \ = '-1'\n\n    # Load data\n    df = pd.read_csv(prepared_data.path)\n\n\
           \    # Convert timestamp to datetime for time-series processing\n    df[\"\
           timestamp\"] = pd.to_datetime(df[\"timestamp\"])\n\n    # Simulate Time-to-Failure\
@@ -600,23 +605,30 @@ deploymentSpec:
           \ y, test_size=0.2, random_state=42)\n\n    # Normalize data\n    scaler\
           \ = StandardScaler()\n    X_train_scaled = scaler.fit_transform(X_train)\n\
           \    X_test_scaled = scaler.transform(X_test)\n\n    # Define neural network\
-          \ for regression (3 hidden layers)\n    ttf_model_tf = keras.Sequential([\n        keras.layers.Input(shape=(X_train.shape[1],)),\n\
-          \        keras.layers.Dense(128, activation='relu'),\n        keras.layers.Dense(64, activation='relu'),\n        keras.layers.Dense(32,\
-          \ activation='relu'),\n        keras.layers.Dense(1)  # No activation for\
-          \ regression\n    ])\n\n    # Compile model\n    ttf_model_tf.compile(optimizer='adam',\
+          \ for regression (3 hidden layers).\n    # Use input_shape in first Dense\
+          \ (no explicit Input layer) so SavedModel/OpenVINO\n    # input name is\
+          \ \"keras_tensor\", matching the notebook 05_bms-ttf-training.\n    ttf_model_tf\
+          \ = keras.Sequential([\n        keras.layers.Dense(128, activation='relu',\
+          \ input_shape=(X_train.shape[1],)),\n        keras.layers.Dense(64, activation='relu'),\n\
+          \        keras.layers.Dense(32, activation='relu'),\n        keras.layers.Dense(1)\
+          \  # No activation for regression\n    ])\n\n    # Compile model\n    ttf_model_tf.compile(optimizer='adam',\
           \ loss='mse', metrics=['mae'])\n\n    # Train model\n    history = ttf_model_tf.fit(X_train_scaled,\
           \ y_train, epochs=50, batch_size=32, \n                              validation_split=0.1,\
           \ verbose=0)\n\n    # Evaluate model\n    y_pred = ttf_model_tf.predict(X_test_scaled,\
           \ verbose=0)\n    mae = mean_absolute_error(y_test, y_pred)\n\n    # Create\
           \ model directory and save\n    model_dir = ttf_model.path\n    os.makedirs(model_dir,\
-          \ exist_ok=True)\n\n    # Save scaler for inference preprocessing\n    scaler_path = os.path.join(model_dir, \"ttf_scaler.pkl\")\n\
-          \    joblib.dump(scaler, scaler_path)\n    print(f\"Scaler saved to {scaler_path}\")\n\n    # Save in Keras native format for validation\n \
-          \   keras_model_path = os.path.join(model_dir, \"model.keras\")\n    ttf_model_tf.save(keras_model_path)\n\
-          \n    # Save as SavedModel format for OpenVINO conversion\n    saved_model_path\
-          \ = os.path.join(model_dir, \"saved_model\")\n    tf.saved_model.save(ttf_model_tf,\
-          \ saved_model_path)\n\n    # Convert to OpenVINO format\n    try:\n    \
-          \    import subprocess\n        cmd = f\"ovc {saved_model_path}\
-          \ --output_model {model_dir}/model\"\n        subprocess.run(cmd, shell=True, check=True,\
+          \ exist_ok=True)\n\n    # Save scaler for inference preprocessing\n    import\
+          \ joblib\n    scaler_path = os.path.join(model_dir, \"ttf_scaler.pkl\")\n\
+          \    joblib.dump(scaler, scaler_path)\n    print(f\"Scaler saved to {scaler_path}\"\
+          )\n\n    # Save in Keras native format for validation\n    keras_model_path\
+          \ = os.path.join(model_dir, \"model.keras\")\n    ttf_model_tf.save(keras_model_path)\n\
+          \n    # Save as SavedModel using Keras API (same as notebook) so input name\
+          \ is \"keras_tensor\"\n    saved_model_path = os.path.join(model_dir, \"\
+          saved_model\")\n    try:\n        ttf_model_tf.export(saved_model_path)\n\
+          \    except AttributeError:\n        ttf_model_tf.save(saved_model_path,\
+          \ save_format=\"tf\")\n\n    # Convert to OpenVINO format\n    try:\n  \
+          \      import subprocess\n        cmd = f\"ovc {saved_model_path} --output_model\
+          \ {model_dir}/model\"\n        subprocess.run(cmd, shell=True, check=True,\
           \ capture_output=True, text=True)\n        print(\"TTF model converted to\
           \ OpenVINO format (.xml/.bin)\")\n    except subprocess.CalledProcessError\
           \ as e:\n        print(f\"OpenVINO conversion failed: {e}\")\n        print(\"\
@@ -658,23 +670,25 @@ deploymentSpec:
           \ str,\n    aws_secret_access_key: str,\n    aws_s3_endpoint: str,\n   \
           \ aws_s3_bucket: str\n) -> NamedTuple('Outputs', [('should_update', str),\
           \ ('new_accuracy', float), ('current_accuracy', float)]):\n    \"\"\"\n\
-          \    Component: Validate stress model against existing model in S3 using OpenVINO\n   \
-          \ \"\"\"\n    import boto3\n    import os\n    import tempfile\n    import pandas as pd\n    import numpy as np\n\
-          \    from openvino.runtime import Core\n  \
-          \  from botocore.exceptions import ClientError\n\n    should_update = \"\
-          false\"\n    current_accuracy = 0.0\n\n    try:\n        # Create s3 connection\n\
-          \        s3_client = boto3.client(\n            's3',\n            aws_access_key_id=aws_access_key_id,\n\
-          \            aws_secret_access_key=aws_secret_access_key,\n            endpoint_url=aws_s3_endpoint\n\
-          \        )\n\n        # Try to download existing OpenVINO model from S3\n       \
-          \ temp_dir = tempfile.mkdtemp()\n        xml_s3_key = \"stress-detection/1/stress-detection.xml\"\
-          \n        bin_s3_key = \"stress-detection/1/stress-detection.bin\"\n        xml_local = os.path.join(temp_dir, \"stress-detection.xml\")\
-          \n        bin_local = os.path.join(temp_dir, \"stress-detection.bin\")\n\n\
-          \        try:\n            s3_client.download_file(aws_s3_bucket, xml_s3_key,\
-          \ xml_local)\n            s3_client.download_file(aws_s3_bucket, bin_s3_key,\
-          \ bin_local)\n            print(f\"Found existing OpenVINO model in S3, downloading\
-          \ for comparison...\")\n\n            # Load existing model with OpenVINO\n\
-          \            core = Core()\n            existing_model = core.compile_model(xml_local, \"CPU\")\n\
-          \            infer_request = existing_model.create_infer_request()\n\
+          \    Component: Validate stress model against existing model in S3 using\
+          \ OpenVINO\n    \"\"\"\n    import boto3\n    import os\n    import tempfile\n\
+          \    import pandas as pd\n    import numpy as np\n    from openvino.runtime\
+          \ import Core\n    from botocore.exceptions import ClientError\n\n    should_update\
+          \ = \"false\"\n    current_accuracy = 0.0\n\n    try:\n        # Create\
+          \ s3 connection\n        s3_client = boto3.client(\n            's3',\n\
+          \            aws_access_key_id=aws_access_key_id,\n            aws_secret_access_key=aws_secret_access_key,\n\
+          \            endpoint_url=aws_s3_endpoint\n        )\n\n        # Try to\
+          \ download existing OpenVINO model from S3\n        temp_dir = tempfile.mkdtemp()\n\
+          \        xml_s3_key = \"stress-detection/1/stress-detection.xml\"\n    \
+          \    bin_s3_key = \"stress-detection/1/stress-detection.bin\"\n        xml_local\
+          \ = os.path.join(temp_dir, \"stress-detection.xml\")\n        bin_local\
+          \ = os.path.join(temp_dir, \"stress-detection.bin\")\n\n        try:\n \
+          \           s3_client.download_file(aws_s3_bucket, xml_s3_key, xml_local)\n\
+          \            s3_client.download_file(aws_s3_bucket, bin_s3_key, bin_local)\n\
+          \            print(f\"Found existing OpenVINO model in S3, downloading for\
+          \ comparison...\")\n\n            # Load existing model with OpenVINO\n\
+          \            core = Core()\n            existing_model = core.compile_model(xml_local,\
+          \ \"CPU\")\n            infer_request = existing_model.create_infer_request()\n\
           \n            # Load test data and evaluate\n            df = pd.read_csv(prepared_data.path)\n\
           \n            # Define stress condition for labels\n            def detect_stress(row):\n\
           \                if row[\"batteryCurrent\"] > 400 or row[\"batteryTemp\"\
@@ -688,11 +702,13 @@ deploymentSpec:
           \ features (simple normalization matching training)\n            X_mean\
           \ = X.mean(axis=0)\n            X_std = X.std(axis=0) + 1e-8\n         \
           \   X_normalized = (X - X_mean) / X_std\n\n            # Evaluate existing\
-          \ model using OpenVINO inference\n            correct = 0\n            for i in range(len(X_normalized)):\n\
-          \                input_data = X_normalized[i:i+1]\n                infer_request.infer({0: input_data})\n\
-          \                output = infer_request.get_output_tensor(0).data\n                prediction = 1 if output[0][0] > 0.5 else 0\n\
-          \                if prediction == y[i]:\n                    correct += 1\n\n\
-          \            current_accuracy = correct / len(y)\n\n            print(f\"Current model accuracy: {current_accuracy:.4f}\"\
+          \ model using OpenVINO inference\n            correct = 0\n            for\
+          \ i in range(len(X_normalized)):\n                input_data = X_normalized[i:i+1]\n\
+          \                infer_request.infer({0: input_data})\n                output\
+          \ = infer_request.get_output_tensor(0).data\n                prediction\
+          \ = 1 if output[0][0] > 0.5 else 0\n                if prediction == y[i]:\n\
+          \                    correct += 1\n\n            current_accuracy = correct\
+          \ / len(y)\n\n            print(f\"Current model accuracy: {current_accuracy:.4f}\"\
           )\n            print(f\"New model accuracy: {new_model_accuracy:.4f}\")\n\
           \n            # Compare models (any improvement is enough)\n           \
           \ if new_model_accuracy > current_accuracy:\n                should_update\
@@ -745,24 +761,25 @@ deploymentSpec:
           \    aws_secret_access_key: str,\n    aws_s3_endpoint: str,\n    aws_s3_bucket:\
           \ str\n) -> NamedTuple('Outputs', [('should_update', str), ('new_mae', float),\
           \ ('current_mae', float)]):\n    \"\"\"\n    Component: Validate TTF model\
-          \ against existing model in S3 using OpenVINO\n    \"\"\"\n    import boto3\n    import\
-          \ os\n    import tempfile\n    import pandas\
-          \ as pd\n    import numpy as np\n    from openvino.runtime import Core\n    from sklearn.metrics import mean_absolute_error\n\
-          \    from botocore.exceptions import ClientError\n\n    should_update =\
-          \ \"false\"\n    current_mae = 999.0  # High default value\n\n    try:\n\
-          \        # Create s3 connection\n        s3_client = boto3.client(\n   \
-          \         's3',\n            aws_access_key_id=aws_access_key_id,\n    \
-          \        aws_secret_access_key=aws_secret_access_key,\n            endpoint_url=aws_s3_endpoint\n\
-          \        )\n\n        # Try to download existing OpenVINO model from S3\n       \
-          \ temp_dir = tempfile.mkdtemp()\n        xml_s3_key = \"time-to-failure/1/time-to-failure.xml\"\
-          \n        bin_s3_key = \"time-to-failure/1/time-to-failure.bin\"\n        xml_local = os.path.join(temp_dir, \"time-to-failure.xml\")\
-          \n        bin_local = os.path.join(temp_dir, \"time-to-failure.bin\")\n\n\
-          \        try:\n            s3_client.download_file(aws_s3_bucket, xml_s3_key,\
+          \ against existing model in S3 using OpenVINO\n    \"\"\"\n    import boto3\n\
+          \    import os\n    import tempfile\n    import pandas as pd\n    import\
+          \ numpy as np\n    from openvino.runtime import Core\n    from sklearn.metrics\
+          \ import mean_absolute_error\n    from botocore.exceptions import ClientError\n\
+          \n    should_update = \"false\"\n    current_mae = 999.0  # High default\
+          \ value\n\n    try:\n        # Create s3 connection\n        s3_client =\
+          \ boto3.client(\n            's3',\n            aws_access_key_id=aws_access_key_id,\n\
+          \            aws_secret_access_key=aws_secret_access_key,\n            endpoint_url=aws_s3_endpoint\n\
+          \        )\n\n        # Try to download existing OpenVINO model from S3\n\
+          \        temp_dir = tempfile.mkdtemp()\n        xml_s3_key = \"time-to-failure/1/time-to-failure.xml\"\
+          \n        bin_s3_key = \"time-to-failure/1/time-to-failure.bin\"\n     \
+          \   xml_local = os.path.join(temp_dir, \"time-to-failure.xml\")\n      \
+          \  bin_local = os.path.join(temp_dir, \"time-to-failure.bin\")\n\n     \
+          \   try:\n            s3_client.download_file(aws_s3_bucket, xml_s3_key,\
           \ xml_local)\n            s3_client.download_file(aws_s3_bucket, bin_s3_key,\
-          \ bin_local)\n            print(f\"Found existing TTF OpenVINO model in S3,\
-          \ downloading for comparison...\")\n\n            # Load existing model with OpenVINO\n\
-          \            core = Core()\n            existing_model = core.compile_model(xml_local, \"CPU\")\n\
-          \            infer_request = existing_model.create_infer_request()\n\
+          \ bin_local)\n            print(f\"Found existing TTF OpenVINO model in\
+          \ S3, downloading for comparison...\")\n\n            # Load existing model\
+          \ with OpenVINO\n            core = Core()\n            existing_model =\
+          \ core.compile_model(xml_local, \"CPU\")\n            infer_request = existing_model.create_infer_request()\n\
           \n            # Load test data and evaluate\n            df = pd.read_csv(prepared_data.path)\n\
           \            df[\"timestamp\"] = pd.to_datetime(df[\"timestamp\"])\n   \
           \         df[\"timeBeforeFailure\"] = (df[\"timestamp\"].max() - df[\"timestamp\"\
@@ -772,29 +789,30 @@ deploymentSpec:
           \ = df[\"timeBeforeFailure\"].values\n\n            # Normalize features\
           \ (matching training)\n            X_mean = X.mean(axis=0)\n           \
           \ X_std = X.std(axis=0) + 1e-8\n            X_normalized = (X - X_mean)\
-          \ / X_std\n\n            # Predict using OpenVINO inference\n            predictions = []\n\
-          \            for i in range(len(X_normalized)):\n                input_data = X_normalized[i:i+1]\n\
-          \                infer_request.infer({0: input_data})\n                output = infer_request.get_output_tensor(0).data\n\
-          \                predictions.append(output[0][0])\n\n            y_pred = np.array(predictions)\n\
-          \            current_mae = mean_absolute_error(y, y_pred)\n\n            print(f\"\
-          Current model MAE: {current_mae:.4f} hours\")\n            print(f\"New\
-          \ model MAE: {new_model_mae:.4f} hours\")\n\n            # Compare (lower\
-          \ MAE is better, any improvement is enough)\n            if new_model_mae\
-          \ < current_mae:\n                should_update = \"true\"\n           \
-          \     improvement = ((current_mae - new_model_mae) / current_mae) * 100\n\
-          \                print(f\"[APPROVED] New model is better! Improvement: {improvement:.2f}%\"\
-          )\n            else:\n                print(f\"[REJECTED] New model not\
-          \ better. Keeping current model.\")\n\n        except ClientError as e:\n\
-          \            error_code = e.response.get('Error', {}).get('Code', '')\n\
-          \            if error_code in ['NoSuchKey', '404', 'NotFound']:\n      \
-          \          print(\"No existing TTF model found in S3, will upload new model\"\
-          )\n                should_update = \"true\"\n            else:\n       \
-          \         print(f\"S3 error: {e}\")\n                print(\"Defaulting\
-          \ to update new model\")\n                should_update = \"true\"\n\n \
-          \   except Exception as e:\n        print(f\"Error during TTF validation:\
-          \ {e}\")\n        import traceback\n        traceback.print_exc()\n    \
-          \    print(\"Defaulting to update new model\")\n        should_update =\
-          \ \"true\"\n\n    from collections import namedtuple\n    output = namedtuple('Outputs',\
+          \ / X_std\n\n            # Predict using OpenVINO inference\n          \
+          \  predictions = []\n            for i in range(len(X_normalized)):\n  \
+          \              input_data = X_normalized[i:i+1]\n                infer_request.infer({0:\
+          \ input_data})\n                output = infer_request.get_output_tensor(0).data\n\
+          \                predictions.append(output[0][0])\n\n            y_pred\
+          \ = np.array(predictions)\n            current_mae = mean_absolute_error(y,\
+          \ y_pred)\n\n            print(f\"Current model MAE: {current_mae:.4f} hours\"\
+          )\n            print(f\"New model MAE: {new_model_mae:.4f} hours\")\n\n\
+          \            # Compare (lower MAE is better, any improvement is enough)\n\
+          \            if new_model_mae < current_mae:\n                should_update\
+          \ = \"true\"\n                improvement = ((current_mae - new_model_mae)\
+          \ / current_mae) * 100\n                print(f\"[APPROVED] New model is\
+          \ better! Improvement: {improvement:.2f}%\")\n            else:\n      \
+          \          print(f\"[REJECTED] New model not better. Keeping current model.\"\
+          )\n\n        except ClientError as e:\n            error_code = e.response.get('Error',\
+          \ {}).get('Code', '')\n            if error_code in ['NoSuchKey', '404',\
+          \ 'NotFound']:\n                print(\"No existing TTF model found in S3,\
+          \ will upload new model\")\n                should_update = \"true\"\n \
+          \           else:\n                print(f\"S3 error: {e}\")\n         \
+          \       print(\"Defaulting to update new model\")\n                should_update\
+          \ = \"true\"\n\n    except Exception as e:\n        print(f\"Error during\
+          \ TTF validation: {e}\")\n        import traceback\n        traceback.print_exc()\n\
+          \        print(\"Defaulting to update new model\")\n        should_update\
+          \ = \"true\"\n\n    from collections import namedtuple\n    output = namedtuple('Outputs',\
           \ ['should_update', 'new_mae', 'current_mae'])\n    return output(should_update,\
           \ float(new_model_mae), float(current_mae))\n\n"
         image: registry.access.redhat.com/ubi9/python-311:latest

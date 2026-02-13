@@ -9,6 +9,10 @@ import os
 # Add current directory to path to import the pipeline
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
+# Output to parent dir as model-retraining.yaml (DSP/OpenShift AI pipeline name)
+_output_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+package_path = os.path.join(_output_dir, "model-retraining.yaml")
+
 try:
     import kfp
     from battery_ml_pipeline import battery_ml_pipeline
@@ -18,14 +22,14 @@ try:
     # Compile pipeline to YAML
     kfp.compiler.Compiler().compile(
         pipeline_func=battery_ml_pipeline,
-        package_path="battery_ml_pipeline.yaml"
+        package_path=package_path
     )
     
-    print("Pipeline compiled successfully to 'battery_ml_pipeline.yaml'")
+    print(f"Pipeline compiled successfully to '{package_path}'")
     print("\nInstructions for using in OpenShift AI:")
-    print("1. Upload the 'battery_ml_pipeline.yaml' file to your OpenShift AI instance")
+    print("1. Upload the 'model-retraining.yaml' file to your OpenShift AI instance")
     print("2. Go to Data Science Pipelines > Pipelines")
-    print("3. Click on 'Import pipeline' and select the YAML file")
+    print("3. Click on 'Import pipeline' and select the model-retraining.yaml file")
     print("4. Create a new pipeline run with appropriate parameters:")
     print("   - influxdb_url: URL of your InfluxDB")
     print("   - influxdb_token: Access token")
@@ -39,7 +43,7 @@ try:
     print(f"- Name: battery-ml-pipeline")
     print(f"- Components: 8 (retrieve -> prepare -> train_stress -> train_ttf -> validate_stress -> validate_ttf -> save_stress -> save_ttf)")
     print(f"- Notebooks included: 01, 02, 03, 05, 07")
-    print(f"- Generated file: {os.path.abspath('battery_ml_pipeline.yaml')}")
+    print(f"- Generated file: {os.path.abspath(package_path)}")
     
 except ImportError as e:
     print(f"Error: Could not import kfp. Install with: pip install kfp")
